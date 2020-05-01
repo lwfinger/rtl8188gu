@@ -285,17 +285,13 @@
 	SET_BITS_TO_LE_4BYTE(__pTxDesc+24, 16, 3, __Value)
 
 /* Dword 7 */
-#ifdef CONFIG_PCI_HCI
+#if (DEV_BUS_TYPE == RT_PCI_INTERFACE)
 #define SET_TX_DESC_TX_BUFFER_SIZE_8710B(__pTxDesc, __Value) \
 	SET_BITS_TO_LE_4BYTE(__pTxDesc+28, 0, 16, __Value)
-#endif
-
-#ifdef CONFIG_USB_HCI
+#elif(DEV_BUS_TYPE == RT_USB_INTERFACE)
 #define SET_TX_DESC_TX_DESC_CHECKSUM_8710B(__pTxDesc, __Value) \
 	SET_BITS_TO_LE_4BYTE(__pTxDesc+28, 0, 16, __Value)
-#endif
-
-#ifdef CONFIG_SDIO_HCI
+#else
 #define SET_TX_DESC_TX_TIMESTAMP_8710B(__pTxDesc, __Value) \
 	SET_BITS_TO_LE_4BYTE(__pTxDesc+28, 6, 18, __Value)
 #endif

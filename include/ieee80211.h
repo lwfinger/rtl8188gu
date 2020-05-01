@@ -15,6 +15,16 @@
 #ifndef __IEEE80211_H
 #define __IEEE80211_H
 
+
+#ifndef CONFIG_RTL8711FW
+
+	#if defined PLATFORM_OS_XP
+		#include <ntstrsafe.h>
+	#endif
+#else
+
+#endif
+
 #define MGMT_QUEUE_NUM 5
 
 #define ETH_ALEN	6
@@ -132,6 +142,8 @@ extern u8 WPA_CIPHER_SUITE_WEP104[];
 #define RSN_SELECTOR_LEN 4
 
 extern u16 RSN_VERSION_BSD;
+extern u8 RSN_AUTH_KEY_MGMT_UNSPEC_802_1X[];
+extern u8 RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X[];
 extern u8 RSN_CIPHER_SUITE_NONE[];
 extern u8 RSN_CIPHER_SUITE_WEP40[];
 extern u8 RSN_CIPHER_SUITE_TKIP[];
@@ -139,91 +151,6 @@ extern u8 RSN_CIPHER_SUITE_WRAP[];
 extern u8 RSN_CIPHER_SUITE_CCMP[];
 extern u8 RSN_CIPHER_SUITE_WEP104[];
 
-/* AKM suite type */
-extern u8 WLAN_AKM_8021X[];
-extern u8 WLAN_AKM_PSK[];
-extern u8 WLAN_AKM_FT_8021X[];
-extern u8 WLAN_AKM_FT_PSK[];
-extern u8 WLAN_AKM_8021X_SHA256[];
-extern u8 WLAN_AKM_PSK_SHA256[];
-extern u8 WLAN_AKM_TDLS[];
-extern u8 WLAN_AKM_SAE[];
-extern u8 WLAN_AKM_FT_OVER_SAE[];
-extern u8 WLAN_AKM_8021X_SUITE_B[];
-extern u8 WLAN_AKM_8021X_SUITE_B_192[];
-extern u8 WLAN_AKM_FILS_SHA256[];
-extern u8 WLAN_AKM_FILS_SHA384[];
-extern u8 WLAN_AKM_FT_FILS_SHA256[];
-extern u8 WLAN_AKM_FT_FILS_SHA384[];
-
-#define WLAN_AKM_TYPE_8021X BIT(0)
-#define WLAN_AKM_TYPE_PSK BIT(1)
-#define WLAN_AKM_TYPE_FT_8021X BIT(2)
-#define WLAN_AKM_TYPE_FT_PSK BIT(3)
-#define WLAN_AKM_TYPE_8021X_SHA256 BIT(4)
-#define WLAN_AKM_TYPE_PSK_SHA256 BIT(5)
-#define WLAN_AKM_TYPE_TDLS BIT(6)
-#define WLAN_AKM_TYPE_SAE BIT(7)
-#define WLAN_AKM_TYPE_FT_OVER_SAE BIT(8)
-#define WLAN_AKM_TYPE_8021X_SUITE_B BIT(9)
-#define WLAN_AKM_TYPE_8021X_SUITE_B_192 BIT(10)
-#define WLAN_AKM_TYPE_FILS_SHA256 BIT(11)
-#define WLAN_AKM_TYPE_FILS_SHA384 BIT(12)
-#define WLAN_AKM_TYPE_FT_FILS_SHA256 BIT(13)
-#define WLAN_AKM_TYPE_FT_FILS_SHA384 BIT(14)
-
-/* IEEE 802.11i */
-#define PMKID_LEN 16
-#define PMK_LEN 32
-#define PMK_LEN_SUITE_B_192 48
-#define PMK_LEN_MAX 48
-#define WPA_REPLAY_COUNTER_LEN 8
-#define WPA_NONCE_LEN 32
-#define WPA_KEY_RSC_LEN 8
-#define WPA_GMK_LEN 32
-#define WPA_GTK_MAX_LEN 32
-
-/* IEEE 802.11, 8.5.2 EAPOL-Key frames */
-#define WPA_KEY_INFO_TYPE_MASK ((u16) (BIT(0) | BIT(1) | BIT(2)))
-#define WPA_KEY_INFO_TYPE_AKM_DEFINED 0
-#define WPA_KEY_INFO_TYPE_HMAC_MD5_RC4 BIT(0)
-#define WPA_KEY_INFO_TYPE_HMAC_SHA1_AES BIT(1)
-#define WPA_KEY_INFO_TYPE_AES_128_CMAC 3
-#define WPA_KEY_INFO_KEY_TYPE BIT(3) /* 1 = Pairwise, 0 = Group key */
-/* bit4..5 is used in WPA, but is reserved in IEEE 802.11i/RSN */
-#define WPA_KEY_INFO_KEY_INDEX_MASK (BIT(4) | BIT(5))
-#define WPA_KEY_INFO_KEY_INDEX_SHIFT 4
-#define WPA_KEY_INFO_INSTALL BIT(6) /* pairwise */
-#define WPA_KEY_INFO_TXRX BIT(6) /* group */
-#define WPA_KEY_INFO_ACK BIT(7)
-#define WPA_KEY_INFO_MIC BIT(8)
-#define WPA_KEY_INFO_SECURE BIT(9)
-#define WPA_KEY_INFO_ERROR BIT(10)
-#define WPA_KEY_INFO_REQUEST BIT(11)
-#define WPA_KEY_INFO_ENCR_KEY_DATA BIT(12) /* IEEE 802.11i/RSN only */
-#define WPA_KEY_INFO_SMK_MESSAGE BIT(13)
-
-struct ieee802_1x_hdr {
-	u8 version;
-	u8 type;
-	u16 length;
-	/* followed by length octets of data */
-};
-
-struct wpa_eapol_key {
-	u8 type;
-	/* Note: key_info, key_length, and key_data_length are unaligned */
-	u8 key_info[2]; /* big endian */
-	u8 key_length[2]; /* big endian */
-	u8 replay_counter[WPA_REPLAY_COUNTER_LEN];
-	u8 key_nonce[WPA_NONCE_LEN];
-	u8 key_iv[16];
-	u8 key_rsc[WPA_KEY_RSC_LEN];
-	u8 key_id[8]; /* Reserved in IEEE 802.11i/RSN */
-	u8 key_mic[16];
-	u8 key_data_length[2]; /* big endian */
-	/* followed by key_data_length bytes of key_data */
-};
 
 typedef enum _RATEID_IDX_ {
 	RATEID_IDX_BGN_40M_2SS = 0,
@@ -413,7 +340,7 @@ struct ieee_ibss_seq {
 	_list	list;
 };
 
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_FREEBSD)
+#if defined(PLATFORM_LINUX) || defined(CONFIG_RTL8711FW) || defined(PLATFORM_FREEBSD)
 
 struct rtw_ieee80211_hdr {
 	u16 frame_ctl;
@@ -464,29 +391,55 @@ struct eapol {
 	u16 length;
 } __attribute__((packed));
 
-struct rtw_ieee80211s_hdr {
-	u8 flags;
-	u8 ttl;
-	u32 seqnum;
-	u8 eaddr1[ETH_ALEN];
-	u8 eaddr2[ETH_ALEN];
-} __attribute__((packed));
-
-/**
- * struct rtw_ieee80211_rann_ie
- *
- * This structure refers to "Root Announcement information element"
- */
- struct rtw_ieee80211_rann_ie {
-	u8 rann_flags;
-	u8 rann_hopcount;
-	u8 rann_ttl;
-	u8 rann_addr[ETH_ALEN];
-	u32 rann_seq;
-	u32 rann_interval;
-	u32 rann_metric;
-} __attribute__((packed));
 #endif
+
+
+
+#ifdef PLATFORM_WINDOWS
+
+#pragma pack(1)
+struct rtw_ieee80211_hdr {
+	u16 frame_ctl;
+	u16 duration_id;
+	u8 addr1[ETH_ALEN];
+	u8 addr2[ETH_ALEN];
+	u8 addr3[ETH_ALEN];
+	u16 seq_ctl;
+	u8 addr4[ETH_ALEN];
+};
+
+struct rtw_ieee80211_hdr_3addr {
+	u16 frame_ctl;
+	u16 duration_id;
+	u8 addr1[ETH_ALEN];
+	u8 addr2[ETH_ALEN];
+	u8 addr3[ETH_ALEN];
+	u16 seq_ctl;
+};
+
+
+struct rtw_ieee80211_hdr_qos {
+	struct rtw_ieee80211_hdr wlan_hdr;
+	u16	qc;
+};
+
+struct rtw_ieee80211_hdr_3addr_qos {
+	struct  rtw_ieee80211_hdr_3addr wlan_hdr;
+	u16     qc;
+};
+
+struct eapol {
+	u8 snap[6];
+	u16 ethertype;
+	u8 version;
+	u8 type;
+	u16 length;
+};
+#pragma pack()
+
+#endif
+
+
 
 enum eap_type {
 	EAP_PACKET = 0,
@@ -596,7 +549,7 @@ enum eap_type {
 
 #define P80211_OUI_LEN 3
 
-#if defined(PLATFORM_LINUX) || defined(PLATFORM_FREEBSD)
+#if defined(PLATFORM_LINUX) || defined(CONFIG_RTL8711FW) || defined(PLATFORM_FREEBSD)
 
 struct ieee80211_snap_hdr {
 
@@ -608,6 +561,22 @@ struct ieee80211_snap_hdr {
 } __attribute__((packed));
 
 #endif
+
+#ifdef PLATFORM_WINDOWS
+
+#pragma pack(1)
+struct ieee80211_snap_hdr {
+
+	u8    dsap;   /* always 0xAA */
+	u8    ssap;   /* always 0xAA */
+	u8    ctrl;   /* always 0x03 */
+	u8    oui[P80211_OUI_LEN];    /* organizational universal id */
+
+};
+#pragma pack()
+
+#endif
+
 
 #define SNAP_SIZE sizeof(struct ieee80211_snap_hdr)
 
@@ -622,7 +591,6 @@ struct ieee80211_snap_hdr {
 /* Authentication algorithms */
 #define WLAN_AUTH_OPEN 0
 #define WLAN_AUTH_SHARED_KEY 1
-#define WLAN_AUTH_SAE 3
 
 #define WLAN_AUTH_CHALLENGE_LEN 128
 
@@ -663,32 +631,10 @@ struct ieee80211_snap_hdr {
 #define WLAN_REASON_CLASS3_FRAME_FROM_NONASSOC_STA 7
 #define WLAN_REASON_DISASSOC_STA_HAS_LEFT 8
 #define WLAN_REASON_STA_REQ_ASSOC_WITHOUT_AUTH 9
-#define WLAN_REASON_MESH_PEER_CANCELED 52
-#define WLAN_REASON_MESH_MAX_PEERS 53
-#define WLAN_REASON_MESH_CONFIG 54
-#define WLAN_REASON_MESH_CLOSE 55
-#define WLAN_REASON_MESH_MAX_RETRIES 56 
-#define WLAN_REASON_MESH_CONFIRM_TIMEOUT 57
-#define WLAN_REASON_MESH_INVALID_GTK 58
-#define WLAN_REASON_MESH_INCONSISTENT_PARAM 59
-#define WLAN_REASON_MESH_INVALID_SECURITY 60
-#define WLAN_REASON_MESH_PATH_NOPROXY 61
-#define WLAN_REASON_MESH_PATH_NOFORWARD 62
-#define WLAN_REASON_MESH_PATH_DEST_UNREACHABLE 63
-#define WLAN_REASON_MAC_EXISTS_IN_MBSS 64
-#define WLAN_REASON_MESH_CHAN_REGULATORY 65
-#define WLAN_REASON_MESH_CHAN 66
 #define WLAN_REASON_SA_QUERY_TIMEOUT 65532
 #define WLAN_REASON_ACTIVE_ROAM 65533
 #define WLAN_REASON_JOIN_WRONG_CHANNEL       65534
 #define WLAN_REASON_EXPIRATION_CHK 65535
-
-#define WLAN_REASON_IS_PRIVATE(reason) ( \
-	reason == WLAN_REASON_EXPIRATION_CHK \
-	|| reason == WLAN_REASON_JOIN_WRONG_CHANNEL \
-	|| reason == WLAN_REASON_ACTIVE_ROAM \
-	|| reason == WLAN_REASON_SA_QUERY_TIMEOUT \
-	)
 
 /* Information Element IDs */
 #define WLAN_EID_SSID 0
@@ -725,15 +671,6 @@ struct ieee80211_snap_hdr {
 #define WLAN_EID_20_40_BSS_INTOLERANT 73
 #define WLAN_EID_OVERLAPPING_BSS_SCAN_PARAMS 74
 #define WLAN_EID_MMIE 76
-#define WLAN_EID_MESH_CONFIG 113
-#define WLAN_EID_MESH_ID 114
-#define WLAN_EID_MPM 117
-#define	WLAN_EID_RANN 126
-#define	WLAN_EID_PREQ 130
-#define	WLAN_EID_PREP 131
-#define	WLAN_EID_PERR 132
-#define WLAN_EID_AMPE 139
-#define WLAN_EID_MIC 140
 #define WLAN_EID_VENDOR_SPECIFIC 221
 #define WLAN_EID_GENERIC (WLAN_EID_VENDOR_SPECIFIC)
 #define WLAN_EID_VHT_CAPABILITY 191
@@ -1163,10 +1100,14 @@ struct ieee80211_softmac_stats {
 
 #define WEP_KEYS 4
 #define WEP_KEY_LEN 13
-#define BIP_MAX_KEYID 5
-#define BIP_AAD_SIZE  20
 
-#if defined(PLATFORM_LINUX)
+#ifdef CONFIG_IEEE80211W
+	#define BIP_MAX_KEYID 5
+	#define BIP_AAD_SIZE  20
+#endif /* CONFIG_IEEE80211W */
+
+#if defined(PLATFORM_LINUX) || defined(CONFIG_RTL8711FW)
+
 struct ieee80211_security {
 	u16 active_key:2,
 	    enabled:1,
@@ -1178,6 +1119,24 @@ struct ieee80211_security {
 	u8 level;
 	u16 flags;
 } __attribute__((packed));
+
+#endif
+
+#ifdef PLATFORM_WINDOWS
+
+#pragma pack(1)
+struct ieee80211_security {
+	u16 active_key:2,
+	    enabled:1,
+	    auth_mode:2,
+	    auth_algo:4,
+	    unicast_uses_group:1;
+	u8 key_sizes[WEP_KEYS];
+	u8 keys[WEP_KEYS][WEP_KEY_LEN];
+	u8 level;
+	u16 flags;
+} ;
+#pragma pack()
 
 #endif
 
@@ -1221,7 +1180,8 @@ struct ieee80211_header_data {
 #define MFIE_TYPE_RATES_EX   50
 #define MFIE_TYPE_GENERIC    221
 
-#if defined(PLATFORM_LINUX)
+#if defined(PLATFORM_LINUX) || defined(CONFIG_RTL8711FW)
+
 struct ieee80211_info_element_hdr {
 	u8 id;
 	u8 len;
@@ -1232,6 +1192,23 @@ struct ieee80211_info_element {
 	u8 len;
 	u8 data[0];
 } __attribute__((packed));
+#endif
+
+#ifdef PLATFORM_WINDOWS
+
+#pragma pack(1)
+struct ieee80211_info_element_hdr {
+	u8 id;
+	u8 len;
+} ;
+
+struct ieee80211_info_element {
+	u8 id;
+	u8 len;
+	u8 data[0];
+} ;
+#pragma pack()
+
 #endif
 
 
@@ -1256,7 +1233,9 @@ struct ieee80211_info_element {
 #define IEEE80211_DEFAULT_BASIC_RATE 10
 
 
-#if defined(PLATFORM_LINUX)
+#if defined(PLATFORM_LINUX) || defined(CONFIG_RTL8711FW)
+
+
 struct ieee80211_authentication {
 	struct ieee80211_header_data header;
 	u16 algorithm;
@@ -1295,6 +1274,57 @@ struct ieee80211_assoc_response_frame {
 	/*	struct ieee80211_info_element info_element;  supported rates  */
 } __attribute__((packed));
 #endif
+
+
+
+#ifdef PLATFORM_WINDOWS
+
+#pragma pack(1)
+
+struct ieee80211_authentication {
+	struct ieee80211_header_data header;
+	u16 algorithm;
+	u16 transaction;
+	u16 status;
+	/* struct ieee80211_info_element_hdr info_element; */
+} ;
+
+
+struct ieee80211_probe_response {
+	struct ieee80211_header_data header;
+	u32 time_stamp[2];
+	u16 beacon_interval;
+	u16 capability;
+	struct ieee80211_info_element info_element;
+} ;
+
+struct ieee80211_probe_request {
+	struct ieee80211_header_data header;
+	/*struct ieee80211_info_element info_element;*/
+} ;
+
+struct ieee80211_assoc_request_frame {
+	struct rtw_ieee80211_hdr_3addr header;
+	u16 capability;
+	u16 listen_interval;
+	/* u8 current_ap[ETH_ALEN]; */
+	struct ieee80211_info_element_hdr info_element;
+} ;
+
+struct ieee80211_assoc_response_frame {
+	struct rtw_ieee80211_hdr_3addr header;
+	u16 capability;
+	u16 status;
+	u16 aid;
+	/*	struct ieee80211_info_element info_element;  supported rates  */
+};
+
+#pragma pack()
+
+#endif
+
+
+
 
 struct ieee80211_txb {
 	u8 nr_frags;
@@ -1546,32 +1576,6 @@ enum rtw_ieee80211_spectrum_mgmt_actioncode {
 	RTW_WLAN_ACTION_SPCT_EXT_CHL_SWITCH = 5,
 };
 
-/* SELF_PROTECTED action code */
-enum rtw_ieee80211_self_protected_actioncode {
-	RTW_ACT_SELF_PROTECTED_RSVD = 0,
-	RTW_ACT_SELF_PROTECTED_MESH_OPEN = 1,
-	RTW_ACT_SELF_PROTECTED_MESH_CONF = 2,
-	RTW_ACT_SELF_PROTECTED_MESH_CLOSE = 3,
-	RTW_ACT_SELF_PROTECTED_MESH_GK_INFORM = 4,
-	RTW_ACT_SELF_PROTECTED_MESH_GK_ACK = 5,
-	RTW_ACT_SELF_PROTECTED_NUM,
-};
-
-/* MESH action code */
-enum rtw_ieee80211_mesh_actioncode {
-	RTW_ACT_MESH_LINK_METRIC_REPORT,
-	RTW_ACT_MESH_HWMP_PATH_SELECTION,
-	RTW_ACT_MESH_GATE_ANNOUNCEMENT,
-	RTW_ACT_MESH_CONGESTION_CONTROL_NOTIFICATION,
-	RTW_ACT_MESH_MCCA_SETUP_REQUEST,
-	RTW_ACT_MESH_MCCA_SETUP_REPLY,
-	RTW_ACT_MESH_MCCA_ADVERTISEMENT_REQUEST,
-	RTW_ACT_MESH_MCCA_ADVERTISEMENT,
-	RTW_ACT_MESH_MCCA_TEARDOWN,
-	RTW_ACT_MESH_TBTT_ADJUSTMENT_REQUEST,
-	RTW_ACT_MESH_TBTT_ADJUSTMENT_RESPONSE,
-};
-
 enum _PUBLIC_ACTION {
 	ACT_PUBLIC_BSSCOEXIST = 0, /* 20/40 BSS Coexistence */
 	ACT_PUBLIC_DSE_ENABLE = 1,
@@ -1656,19 +1660,11 @@ enum rtw_ieee80211_vht_actioncode {
 #ifdef CONFIG_RTW_80211R
 enum rtw_ieee80211_ft_actioncode {
 	RTW_WLAN_ACTION_FT_RESV,
-	RTW_WLAN_ACTION_FT_REQ,
-	RTW_WLAN_ACTION_FT_RSP,
-	RTW_WLAN_ACTION_FT_CONF,
+	RTW_WLAN_ACTION_FT_REQUEST,
+	RTW_WLAN_ACTION_FT_RESPONSE,
+	RTW_WLAN_ACTION_FT_CONFIRM,
 	RTW_WLAN_ACTION_FT_ACK,
 	RTW_WLAN_ACTION_FT_MAX,
-};
-#endif
-
-#ifdef CONFIG_RTW_WNM
-enum rtw_ieee80211_wnm_actioncode {
-	RTW_WLAN_ACTION_WNM_BTM_QUERY = 6,
-	RTW_WLAN_ACTION_WNM_BTM_REQ = 7,
-	RTW_WLAN_ACTION_WNM_BTM_RSP = 8,
 };
 #endif
 
@@ -1698,55 +1694,6 @@ enum rtw_ieee80211_wnm_actioncode {
 #define OUI_BROADCOM 0x00904c /* Broadcom (Epigram) */
 
 #define VENDOR_HT_CAPAB_OUI_TYPE 0x33 /* 00-90-4c:0x33 */
-
-enum rtw_ieee80211_rann_flags {
-	RTW_RANN_FLAG_IS_GATE = 1 << 0,
-};
-
-/**
- * enum rtw_ieee80211_preq_flags - mesh PREQ element flags
- *
- * @RTW_IEEE80211_PREQ_IS_GATE_FLAG: Gate Announcement subfield
- * @RTW_IEEE80211_PREQ_PROACTIVE_PREP_FLAG: proactive PREP subfield
- */
-enum rtw_ieee80211_preq_flags {
-	RTW_IEEE80211_PREQ_IS_GATE_FLAG = 1 << 0,
-	RTW_IEEE80211_PREQ_PROACTIVE_PREP_FLAG	= 1 << 2,
-};
-
-/**
- * enum rtw_ieee80211_preq_target_flags - mesh PREQ element per target flags
- *
- * @RTW_IEEE80211_PREQ_TO_FLAG: target only subfield
- * @RTW_IEEE80211_PREQ_USN_FLAG: unknown target HWMP sequence number subfield
- */
-enum rtw_ieee80211_preq_target_flags {
-	RTW_IEEE80211_PREQ_TO_FLAG	= 1<<0,
-	RTW_IEEE80211_PREQ_USN_FLAG	= 1<<2,
-};
-
-/**
- * enum rtw_ieee80211_root_mode_identifier - root mesh STA mode identifier
- *
- * These attribute are used by dot11MeshHWMPRootMode to set root mesh STA mode
- *
- * @RTW_IEEE80211_ROOTMODE_NO_ROOT: the mesh STA is not a root mesh STA (default)
- * @RTW_IEEE80211_ROOTMODE_ROOT: the mesh STA is a root mesh STA if greater than
- *	this value
- * @RTW_IEEE80211_PROACTIVE_PREQ_NO_PREP: the mesh STA is a root mesh STA supports
- *	the proactive PREQ with proactive PREP subfield set to 0
- * @RTW_IEEE80211_PROACTIVE_PREQ_WITH_PREP: the mesh STA is a root mesh STA
- *	supports the proactive PREQ with proactive PREP subfield set to 1
- * @RTW_IEEE80211_PROACTIVE_RANN: the mesh STA is a root mesh STA supports
- *	the proactive RANN
- */
-enum rtw_ieee80211_root_mode_identifier {
-	RTW_IEEE80211_ROOTMODE_NO_ROOT = 0,
-	RTW_IEEE80211_ROOTMODE_ROOT = 1,
-	RTW_IEEE80211_PROACTIVE_PREQ_NO_PREP = 2,
-	RTW_IEEE80211_PROACTIVE_PREQ_WITH_PREP = 3,
-	RTW_IEEE80211_PROACTIVE_RANN = 4,
-};
 
 /**
  * enum rtw_ieee80211_channel_flags - channel flags
@@ -1872,16 +1819,6 @@ struct rtw_ieee802_11_elems {
 	u8 vht_op_mode_notify_len;
 	u8 *rm_en_cap;
 	u8 rm_en_cap_len;
-#ifdef CONFIG_RTW_MESH
-	u8 *preq;
-	u8 preq_len;
-	u8 *prep;
-	u8 prep_len;
-	u8 *perr;
-	u8 perr_len;
-	u8 *rann;
-	u8 rann_len;
-#endif
 };
 
 typedef enum { ParseOK = 0, ParseUnknown = 1, ParseFailed = -1 } ParseRes;
@@ -1905,8 +1842,6 @@ u8 *rtw_set_ie_secondary_ch_offset(u8 *buf, u32 *buf_len, u8 secondary_ch_offset
 u8 *rtw_set_ie_mesh_ch_switch_parm(u8 *buf, u32 *buf_len, u8 ttl, u8 flags, u16 reason, u16 precedence);
 
 u8 *rtw_get_ie(const u8 *pbuf, sint index, sint *len, sint limit);
-u8 rtw_update_rate_bymode(WLAN_BSSID_EX *pbss_network, u32 mode);
-
 u8 *rtw_get_ie_ex(const u8 *in_ie, uint in_len, u8 eid, const u8 *oui, u8 oui_len, u8 *ie, uint *ielen);
 int rtw_ies_remove_ie(u8 *ies, uint *ies_len, uint offset, u8 eid, u8 *oui, u8 oui_len);
 
@@ -1939,8 +1874,8 @@ unsigned char *rtw_get_wpa2_ie(unsigned char *pie, int *rsn_ie_len, int limit);
 int rtw_get_wpa_cipher_suite(u8 *s);
 int rtw_get_wpa2_cipher_suite(u8 *s);
 int rtw_get_wapi_ie(u8 *in_ie, uint in_len, u8 *wapi_ie, u16 *wapi_len);
-int rtw_parse_wpa_ie(u8 *wpa_ie, int wpa_ie_len, int *group_cipher, int *pairwise_cipher, u32 *akm);
-int rtw_parse_wpa2_ie(u8 *wpa_ie, int wpa_ie_len, int *group_cipher, int *pairwise_cipher, u32 *akm, u8 *mfp_opt);
+int rtw_parse_wpa_ie(u8 *wpa_ie, int wpa_ie_len, int *group_cipher, int *pairwise_cipher, int *is_8021x);
+int rtw_parse_wpa2_ie(u8 *wpa_ie, int wpa_ie_len, int *group_cipher, int *pairwise_cipher, int *is_8021x, u8 *mfp_opt);
 
 int rtw_get_sec_ie(u8 *in_ie, uint in_len, u8 *rsn_ie, u16 *rsn_len, u8 *wpa_ie, u16 *wpa_len);
 
@@ -1962,18 +1897,14 @@ u8 *rtw_get_wps_attr_content(u8 *wps_ie, uint wps_ielen, u16 target_attr_id , u8
 void dump_ies(void *sel, const u8 *buf, u32 buf_len);
 
 #ifdef CONFIG_80211N_HT
-#define HT_SC_OFFSET_MAX 4
-extern const char *const _ht_sc_offset_str[];
-#define ht_sc_offset_str(sc) (((sc) >= HT_SC_OFFSET_MAX) ? _ht_sc_offset_str[2] : _ht_sc_offset_str[(sc)])
-
 void dump_ht_cap_ie_content(void *sel, const u8 *buf, u32 buf_len);
 #endif
 
 void dump_wps_ie(void *sel, const u8 *ie, u32 ie_len);
 
-void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht);
+void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset);
 
-void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht);
+void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset);
 
 bool rtw_is_chbw_grouped(u8 ch_a, u8 bw_a, u8 offset_a
 	, u8 ch_b, u8 bw_b, u8 offset_b);
@@ -2013,7 +1944,7 @@ int rtw_get_bit_value_from_ieee_value(u8 val);
 uint	rtw_is_cckrates_included(u8 *rate);
 
 uint	rtw_is_cckratesonly_included(u8 *rate);
-uint rtw_get_cckrate_size(u8 *rate,u32 rate_length);
+
 int rtw_check_network_type(unsigned char *rate, int ratelen, int channel);
 
 void rtw_get_bcn_info(struct wlan_network *pnetwork);

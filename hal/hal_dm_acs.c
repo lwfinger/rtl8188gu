@@ -79,15 +79,15 @@ void rtw_acs_version_dump(void *sel, _adapter *adapter)
 }
 u8 rtw_phydm_clm_ratio(_adapter *adapter)
 {
-	struct dm_struct *phydm = adapter_to_phydm(adapter);
+	struct PHY_DM_STRUCT *phydm = adapter_to_phydm(adapter);
 
-	return phydm_cmn_info_query(phydm, (enum phydm_info_query) PHYDM_INFO_CLM_RATIO);
+	return phydm_cmn_info_query(phydm, (enum phydm_info_query_e) PHYDM_INFO_CLM_RATIO);
 }
 u8 rtw_phydm_nhm_ratio(_adapter *adapter)
 {
-	struct dm_struct *phydm = adapter_to_phydm(adapter);
+	struct PHY_DM_STRUCT *phydm = adapter_to_phydm(adapter);
 
-	return phydm_cmn_info_query(phydm, (enum phydm_info_query) PHYDM_INFO_NHM_RATIO);
+	return phydm_cmn_info_query(phydm, (enum phydm_info_query_e) PHYDM_INFO_NHM_RATIO);
 }
 void rtw_acs_reset(_adapter *adapter)
 {
@@ -130,41 +130,13 @@ void rtw_acs_adv_reset(_adapter *adapter)
 	rtw_acs_adv_setting(adapter, SCAN_ACTIVE, 0, 0, 0);
 }
 #endif /*CONFIG_RTW_ACS_DBG*/
-
-void rtw_acs_trigger(_adapter *adapter, u16 scan_time_ms, u8 scan_chan, enum NHM_PID pid)
+void rtw_acs_trigger(_adapter *adapter, u16 scan_time_ms, u8 scan_chan)
 {
 	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(adapter);
-	struct dm_struct *phydm = adapter_to_phydm(adapter);
-#if (RTK_ACS_VERSION == 3)
-	struct clm_para_info clm_para;
-	struct nhm_para_info nhm_para;
-	struct env_trig_rpt trig_rpt;
-
-	scan_time_ms -= 10;
-
-	init_acs_clm(clm_para, scan_time_ms);
-
-	if (pid == NHM_PID_IEEE_11K_HIGH)
-		init_11K_high_nhm(nhm_para, scan_time_ms);
-	else if (pid == NHM_PID_IEEE_11K_LOW)
-		init_11K_low_nhm(nhm_para, scan_time_ms);
-	else
-		init_acs_nhm(nhm_para, scan_time_ms);
-
-	hal_data->acs.trig_rst = phydm_env_mntr_trigger(phydm, &nhm_para, &clm_para, &trig_rpt);
-	if (hal_data->acs.trig_rst == (NHM_SUCCESS | CLM_SUCCESS)) {
-		hal_data->acs.trig_rpt.clm_rpt_stamp = trig_rpt.clm_rpt_stamp;
-		hal_data->acs.trig_rpt.nhm_rpt_stamp = trig_rpt.nhm_rpt_stamp;
-		/*RTW_INFO("[ACS] trigger success (rst = 0x%02x, clm_stamp:%d, nhm_stamp:%d)\n",
-			hal_data->acs.trig_rst, hal_data->acs.trig_rpt.clm_rpt_stamp, hal_data->acs.trig_rpt.nhm_rpt_stamp);*/
-	} else
-		RTW_ERR("[ACS] trigger failed (rst = 0x%02x)\n", hal_data->acs.trig_rst);
-#else
-	phydm_ccx_monitor_trigger(phydm, scan_time_ms);
-#endif
+	struct PHY_DM_STRUCT *phydm = adapter_to_phydm(adapter);
 
 	hal_data->acs.trigger_ch = scan_chan;
-	hal_data->acs.triggered = _TRUE;
+	phydm_ccx_monitor_trigger(phydm, scan_time_ms);
 
 	#ifdef CONFIG_RTW_ACS_DBG
 	RTW_INFO("[ACS] Trigger CH:%d, Times:%d\n", hal_data->acs.trigger_ch, scan_time_ms);
@@ -173,14 +145,11 @@ void rtw_acs_trigger(_adapter *adapter, u16 scan_time_ms, u8 scan_chan, enum NHM
 void rtw_acs_get_rst(_adapter *adapter)
 {
 	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(adapter);
-	struct dm_struct *phydm = adapter_to_phydm(adapter);
+	struct PHY_DM_STRUCT *phydm = adapter_to_phydm(adapter);
 	int chan_idx = -1;
 	u8 cur_chan = hal_data->acs.trigger_ch;
 
 	if (cur_chan == 0)
-		return;
-
-	if (!hal_data->acs.triggered)
 		return;
 
 	chan_idx = rtw_chset_search_ch(adapter_to_chset(adapter), cur_chan);
@@ -188,43 +157,12 @@ void rtw_acs_get_rst(_adapter *adapter)
 		RTW_ERR("[ACS] %s can't get chan_idx(CH:%d)\n", __func__, cur_chan);
 		return;
 	}
-#if (RTK_ACS_VERSION == 3)
-	if (!(hal_data->acs.trig_rst == (NHM_SUCCESS | CLM_SUCCESS))) {
-		RTW_ERR("[ACS] get_rst return, due to acs trigger failed\n");
-		return;
-	}
 
-	{
-		struct env_mntr_rpt rpt = {0};
-		u8 rst;
-
-		rst = phydm_env_mntr_result(phydm, &rpt);
-		if ((rst == (NHM_SUCCESS | CLM_SUCCESS)) &&
-			(rpt.clm_rpt_stamp == hal_data->acs.trig_rpt.clm_rpt_stamp) &&
-			(rpt.nhm_rpt_stamp == hal_data->acs.trig_rpt.nhm_rpt_stamp)){
-			hal_data->acs.clm_ratio[chan_idx] = rpt.clm_ratio;
-			hal_data->acs.nhm_ratio[chan_idx] = rpt.nhm_ratio;
-			_rtw_memcpy(&hal_data->acs.nhm[chan_idx][0], rpt.nhm_result, NHM_RPT_NUM);
-
-			/*RTW_INFO("[ACS] get_rst success (rst = 0x%02x, clm_stamp:%d:%d, nhm_stamp:%d:%d)\n",
-			rst,
-			hal_data->acs.trig_rpt.clm_rpt_stamp, rpt.clm_rpt_stamp,
-			hal_data->acs.trig_rpt.nhm_rpt_stamp, rpt.nhm_rpt_stamp);*/
-		} else {
-			RTW_ERR("[ACS] get_rst failed (rst = 0x%02x, clm_stamp:%d:%d, nhm_stamp:%d:%d)\n",
-			rst,
-			hal_data->acs.trig_rpt.clm_rpt_stamp, rpt.clm_rpt_stamp,
-			hal_data->acs.trig_rpt.nhm_rpt_stamp, rpt.nhm_rpt_stamp);
-		}
-	}
-
-#else
 	phydm_ccx_monitor_result(phydm);
 
 	hal_data->acs.clm_ratio[chan_idx] = rtw_phydm_clm_ratio(adapter);
 	hal_data->acs.nhm_ratio[chan_idx] = rtw_phydm_nhm_ratio(adapter);
-#endif
-	hal_data->acs.triggered = _FALSE;
+
 	#ifdef CONFIG_RTW_ACS_DBG
 	RTW_INFO("[ACS] Result CH:%d, CLM:%d NHM:%d\n",
 		cur_chan, hal_data->acs.clm_ratio[chan_idx], hal_data->acs.nhm_ratio[chan_idx]);
@@ -468,7 +406,7 @@ void rtw_noise_info_dump(void *sel, _adapter *adapter)
 void rtw_noise_measure(_adapter *adapter, u8 chan, u8 is_pause_dig, u8 igi_value, u32 max_time)
 {
 	HAL_DATA_TYPE *hal_data = GET_HAL_DATA(adapter);
-	struct dm_struct *phydm = &hal_data->odmpriv;
+	struct PHY_DM_STRUCT *phydm = &hal_data->odmpriv;
 	int chan_idx = -1;
 	s16 noise = 0;
 

@@ -33,40 +33,26 @@ u8 WPA_CIPHER_SUITE_CCMP[] = { 0x00, 0x50, 0xf2, 4 };
 u8 WPA_CIPHER_SUITE_WEP104[] = { 0x00, 0x50, 0xf2, 5 };
 
 u16 RSN_VERSION_BSD = 1;
+u8 RSN_AUTH_KEY_MGMT_UNSPEC_802_1X[] = { 0x00, 0x0f, 0xac, 1 };
+u8 RSN_AUTH_KEY_MGMT_PSK_OVER_802_1X[] = { 0x00, 0x0f, 0xac, 2 };
 u8 RSN_CIPHER_SUITE_NONE[] = { 0x00, 0x0f, 0xac, 0 };
 u8 RSN_CIPHER_SUITE_WEP40[] = { 0x00, 0x0f, 0xac, 1 };
 u8 RSN_CIPHER_SUITE_TKIP[] = { 0x00, 0x0f, 0xac, 2 };
 u8 RSN_CIPHER_SUITE_WRAP[] = { 0x00, 0x0f, 0xac, 3 };
 u8 RSN_CIPHER_SUITE_CCMP[] = { 0x00, 0x0f, 0xac, 4 };
 u8 RSN_CIPHER_SUITE_WEP104[] = { 0x00, 0x0f, 0xac, 5 };
-
-u8 WLAN_AKM_8021X[] = {0x00, 0x0f, 0xac, 1};
-u8 WLAN_AKM_PSK[] = {0x00, 0x0f, 0xac, 2};
-u8 WLAN_AKM_FT_8021X[] = {0x00, 0x0f, 0xac, 3};
-u8 WLAN_AKM_FT_PSK[] = {0x00, 0x0f, 0xac, 4};
-u8 WLAN_AKM_8021X_SHA256[] = {0x00, 0x0f, 0xac, 5};
-u8 WLAN_AKM_PSK_SHA256[] = {0x00, 0x0f, 0xac, 6};
-u8 WLAN_AKM_TDLS[] = {0x00, 0x0f, 0xac, 7};
-u8 WLAN_AKM_SAE[] = {0x00, 0x0f, 0xac, 8};
-u8 WLAN_AKM_FT_OVER_SAE[] = {0x00, 0x0f, 0xac, 9};
-u8 WLAN_AKM_8021X_SUITE_B[] = {0x00, 0x0f, 0xac, 11};
-u8 WLAN_AKM_8021X_SUITE_B_192[] = {0x00, 0x0f, 0xac, 12};
-u8 WLAN_AKM_FILS_SHA256[] = {0x00, 0x0f, 0xac, 14};
-u8 WLAN_AKM_FILS_SHA384[] = {0x00, 0x0f, 0xac, 15};
-u8 WLAN_AKM_FT_FILS_SHA256[] = {0x00, 0x0f, 0xac, 16};
-u8 WLAN_AKM_FT_FILS_SHA384[] = {0x00, 0x0f, 0xac, 17};
 /* -----------------------------------------------------------
  * for adhoc-master to generate ie and provide supported-rate to fw
  * ----------------------------------------------------------- */
 
-u8	WIFI_CCKRATES[] = {
+static u8	WIFI_CCKRATES[] = {
 	(IEEE80211_CCK_RATE_1MB | IEEE80211_BASIC_RATE_MASK),
 	(IEEE80211_CCK_RATE_2MB | IEEE80211_BASIC_RATE_MASK),
 	(IEEE80211_CCK_RATE_5MB | IEEE80211_BASIC_RATE_MASK),
 	(IEEE80211_CCK_RATE_11MB | IEEE80211_BASIC_RATE_MASK)
 };
 
-u8	WIFI_OFDMRATES[] = {
+static u8	WIFI_OFDMRATES[] = {
 	(IEEE80211_OFDM_RATE_6MB),
 	(IEEE80211_OFDM_RATE_9MB),
 	(IEEE80211_OFDM_RATE_12MB),
@@ -140,19 +126,6 @@ int rtw_get_bit_value_from_ieee_value(u8 val)
 		i++;
 	}
 	return 0;
-}
-uint rtw_get_cckrate_size(u8 *rate, u32 rate_length)
-{
-	int i = 0;
-	while(i < rate_length){
-		RTW_DBG("%s, rate[%d]=%u\n", __FUNCTION__, i, rate[i]);
-		if (((rate[i] & 0x7f) == 2) || ((rate[i] & 0x7f) == 4) ||
-			((rate[i] & 0x7f) == 11)  || ((rate[i] & 0x7f) == 22))
-			i++;
-		else
-			break;
-	}
-	return i;
 }
 
 uint	rtw_is_cckrates_included(u8 *rate)
@@ -251,9 +224,9 @@ inline u8 secondary_ch_offset_to_hal_ch_offset(u8 ch_offset)
 	if (ch_offset == SCN)
 		return HAL_PRIME_CHNL_OFFSET_DONT_CARE;
 	else if (ch_offset == SCA)
-		return HAL_PRIME_CHNL_OFFSET_LOWER;
-	else if (ch_offset == SCB)
 		return HAL_PRIME_CHNL_OFFSET_UPPER;
+	else if (ch_offset == SCB)
+		return HAL_PRIME_CHNL_OFFSET_LOWER;
 
 	return HAL_PRIME_CHNL_OFFSET_DONT_CARE;
 }
@@ -263,9 +236,9 @@ inline u8 hal_ch_offset_to_secondary_ch_offset(u8 ch_offset)
 	if (ch_offset == HAL_PRIME_CHNL_OFFSET_DONT_CARE)
 		return SCN;
 	else if (ch_offset == HAL_PRIME_CHNL_OFFSET_LOWER)
-		return SCA;
-	else if (ch_offset == HAL_PRIME_CHNL_OFFSET_UPPER)
 		return SCB;
+	else if (ch_offset == HAL_PRIME_CHNL_OFFSET_UPPER)
+		return SCA;
 
 	return SCN;
 }
@@ -437,72 +410,6 @@ void rtw_set_supported_rate(u8 *SupportedRates, uint mode)
 	}
 }
 
-void rtw_filter_suppport_rateie(WLAN_BSSID_EX *pbss_network, u8 keep)
-{
-	u8 i, idx = 0, new_rate[NDIS_802_11_LENGTH_RATES_EX], *p;
-	int ret = 0;
-	uint iscck, isofdm, ie_orilen = 0, remain_len;
-	u8 *remain_ies;
-
-	p = rtw_get_ie(pbss_network->IEs + _BEACON_IE_OFFSET_, _SUPPORTEDRATES_IE_, &ie_orilen, (pbss_network->IELength - _BEACON_IE_OFFSET_));
-	if (!p)
-		return;
-
-	_rtw_memset(new_rate, 0, NDIS_802_11_LENGTH_RATES_EX);
-	for (i=0; i < ie_orilen; i++) {
-		iscck = rtw_is_cck_rate(p[i+2]);
-		isofdm= rtw_is_ofdm_rate(p[i+2]);
-		if (((keep == CCK) && iscck)
-			|| ((keep == OFDM) && isofdm))
-			new_rate[idx++]= rtw_is_basic_rate_ofdm(p[i+2]) ? p[i+2]|IEEE80211_BASIC_RATE_MASK : p[i+2];
-	}
-	/*	update rate ie	*/
-	p[1] = idx;
-	_rtw_memcpy(p+2, new_rate, idx);
-	/*	update remain ie & IELength*/
-	remain_ies = p + 2 + ie_orilen;
-	remain_len = pbss_network->IELength - (remain_ies - pbss_network->IEs);
-	_rtw_memmove(p+2+idx, remain_ies, remain_len);
-	pbss_network->IELength -= (ie_orilen - idx);
-}
- 
-
-/*
-	Adjust those items by given wireless_mode
-		1. pbss_network->IELength
-		2. pbss_network->IE (SUPPORTRATE & EXT_SUPPORTRATE)
-		3. pbss_network->SupportedRates
-*/
-
-u8 rtw_update_rate_bymode(WLAN_BSSID_EX *pbss_network, u32 mode)
-{
-	u8 network_type, *p, *ie = pbss_network->IEs;
-	sint ie_len;
-	uint network_ielen = pbss_network->IELength;
-
-	if (mode == WIRELESS_11B) {
-		/*only keep CCK in support_rate IE and remove whole ext_support_rate IE*/
-		rtw_filter_suppport_rateie(pbss_network, CCK);
-		p = rtw_get_ie(ie + _BEACON_IE_OFFSET_, _EXT_SUPPORTEDRATES_IE_, &ie_len, pbss_network->IELength - _BEACON_IE_OFFSET_);
-		if (p) {
-			rtw_ies_remove_ie(ie , &network_ielen, _BEACON_IE_OFFSET_, _EXT_SUPPORTEDRATES_IE_, NULL, 0);
-			pbss_network->IELength -= ie_len;
-		}
-		network_type = WIRELESS_11B;
-	} else if ((mode & WIRELESS_11B) == 0) {
-		/* Remove CCK in support_rate IE */
-		rtw_filter_suppport_rateie(pbss_network, OFDM);
-		if (pbss_network->Configuration.DSConfig > 14)
-			network_type = WIRELESS_11A;
-		else
-			network_type = WIRELESS_11G;
-	} else
-		network_type = WIRELESS_11BG;		/*	do nothing	*/
-
-	rtw_set_supported_rate(pbss_network->SupportedRates, network_type);
-	return network_type;
-}
-
 uint	rtw_get_rateset_len(u8	*rateset)
 {
 	uint i = 0;
@@ -589,7 +496,7 @@ int rtw_generate_ie(struct registry_priv *pregistrypriv)
 
 #ifdef CONFIG_80211N_HT
 	/* HT Cap. */
-	if (is_supported_ht(pregistrypriv->wireless_mode)
+	if (((pregistrypriv->wireless_mode & WIRELESS_11_5N) || (pregistrypriv->wireless_mode & WIRELESS_11_24N))
 	    && (pregistrypriv->ht_enable == _TRUE)) {
 		/* todo: */
 	}
@@ -695,44 +602,8 @@ int rtw_get_wpa2_cipher_suite(u8 *s)
 	return 0;
 }
 
-u32 rtw_get_akm_suite_bitmap(u8 *s)
-{
-	if (_rtw_memcmp(s, WLAN_AKM_8021X, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_8021X;
-	if (_rtw_memcmp(s, WLAN_AKM_PSK, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_PSK;
-	if (_rtw_memcmp(s, WLAN_AKM_FT_8021X, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_FT_8021X;
-	if (_rtw_memcmp(s, WLAN_AKM_FT_PSK, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_FT_PSK;
-	if (_rtw_memcmp(s, WLAN_AKM_8021X_SHA256, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_8021X_SHA256;
-	if (_rtw_memcmp(s, WLAN_AKM_PSK_SHA256, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_PSK_SHA256;
-	if (_rtw_memcmp(s, WLAN_AKM_TDLS, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_TDLS;
-	if (_rtw_memcmp(s, WLAN_AKM_SAE, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_SAE;
-	if (_rtw_memcmp(s, WLAN_AKM_FT_OVER_SAE, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_FT_OVER_SAE;
-	if (_rtw_memcmp(s, WLAN_AKM_8021X_SUITE_B, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_8021X_SUITE_B;
-	if (_rtw_memcmp(s, WLAN_AKM_8021X_SUITE_B_192, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_8021X_SUITE_B_192;
-	if (_rtw_memcmp(s, WLAN_AKM_FILS_SHA256, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_FILS_SHA256;
-	if (_rtw_memcmp(s, WLAN_AKM_FILS_SHA384, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_FILS_SHA384;
-	if (_rtw_memcmp(s, WLAN_AKM_FT_FILS_SHA256, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_FT_FILS_SHA256;
-	if (_rtw_memcmp(s, WLAN_AKM_FT_FILS_SHA384, RSN_SELECTOR_LEN) == _TRUE)
-		return WLAN_AKM_TYPE_FT_FILS_SHA384;
 
-	return 0;
-}
-
-int rtw_parse_wpa_ie(u8 *wpa_ie, int wpa_ie_len, int *group_cipher,
-	int *pairwise_cipher, u32 *akm)
+int rtw_parse_wpa_ie(u8 *wpa_ie, int wpa_ie_len, int *group_cipher, int *pairwise_cipher, int *is_8021x)
 {
 	int i, ret = _SUCCESS;
 	int left, count;
@@ -791,11 +662,11 @@ int rtw_parse_wpa_ie(u8 *wpa_ie, int wpa_ie_len, int *group_cipher,
 		return _FAIL;
 	}
 
-	if (akm) {
+	if (is_8021x) {
 		if (left >= 6) {
 			pos += 2;
 			if (_rtw_memcmp(pos, SUITE_1X, 4) == 1) {
-				*akm = WLAN_AKM_TYPE_8021X;
+				*is_8021x = 1;
 			}
 		}
 	}
@@ -806,6 +677,7 @@ int rtw_parse_wpa_ie(u8 *wpa_ie, int wpa_ie_len, int *group_cipher,
 
 int rtw_rsne_info_parse(const u8 *ie, uint ie_len, struct rsne_info *info)
 {
+	int i;
 	const u8 *pos = ie;
 	u16 cnt;
 
@@ -903,11 +775,11 @@ err:
 	return _FAIL;
 }
 
-int rtw_parse_wpa2_ie(u8 *rsn_ie, int rsn_ie_len, int *group_cipher,
-	int *pairwise_cipher, u32 *akm, u8 *mfp_opt)
+int rtw_parse_wpa2_ie(u8 *rsn_ie, int rsn_ie_len, int *group_cipher, int *pairwise_cipher, int *is_8021x, u8 *mfp_opt)
 {
 	struct rsne_info info;
 	int i, ret = _SUCCESS;
+	u8 SUITE_1X[4] = {0x00, 0x0f, 0xac, 0x01};
 
 	ret = rtw_rsne_info_parse(rsn_ie, rsn_ie_len, &info);
 	if (ret != _SUCCESS)
@@ -926,10 +798,11 @@ int rtw_parse_wpa2_ie(u8 *rsn_ie, int rsn_ie_len, int *group_cipher,
 			*pairwise_cipher |= rtw_get_wpa2_cipher_suite(info.pcs_list + 4 * i);
 	}
 
-	if (akm) {
-		*akm = 0;
-		for (i = 0; i < info.akm_cnt; i++)
-			*akm |= rtw_get_akm_suite_bitmap(info.akm_list + 4 * i);
+	if (is_8021x) {
+		*is_8021x = 0;
+		/* here only check the first AKM suite */
+		if (info.akm_cnt && _rtw_memcmp(SUITE_1X, info.akm_list, 4) == _TRUE)
+			*is_8021x = 1;
 	}
 
 	if (mfp_opt) {
@@ -946,7 +819,7 @@ exit:
 int rtw_get_wapi_ie(u8 *in_ie, uint in_len, u8 *wapi_ie, u16 *wapi_len)
 {
 	int len = 0;
-	u8 authmode;
+	u8 authmode, i;
 	uint	cnt;
 	u8 wapi_oui1[4] = {0x0, 0x14, 0x72, 0x01};
 	u8 wapi_oui2[4] = {0x0, 0x14, 0x72, 0x02};
@@ -989,7 +862,7 @@ int rtw_get_wapi_ie(u8 *in_ie, uint in_len, u8 *wapi_ie, u16 *wapi_len)
 
 int rtw_get_sec_ie(u8 *in_ie, uint in_len, u8 *rsn_ie, u16 *rsn_len, u8 *wpa_ie, u16 *wpa_len)
 {
-	u8 authmode, sec_idx;
+	u8 authmode, sec_idx, i;
 	u8 wpa_oui[4] = {0x0, 0x50, 0xf2, 0x01};
 	uint	cnt;
 
@@ -1438,24 +1311,6 @@ ParseRes rtw_ieee802_11_parse_elems(u8 *start, uint len,
 			elems->rm_en_cap = pos;
 			elems->rm_en_cap_len = elen;
 			break;
-#ifdef CONFIG_RTW_MESH
-		case WLAN_EID_PREQ:
-			elems->preq = pos;
-			elems->preq_len = elen;
-			break;
-		case WLAN_EID_PREP:
-			elems->prep = pos;
-			elems->prep_len = elen;
-			break;
-		case WLAN_EID_PERR:
-			elems->perr = pos;
-			elems->perr_len = elen;
-			break;
-		case WLAN_EID_RANN:
-			elems->rann = pos;
-			elems->rann_len = elen;
-			break;
-#endif
 		default:
 			unknown++;
 			if (!show_errors)
@@ -1655,13 +1510,12 @@ err_chk:
 #ifdef CONFIG_80211N_HT
 void dump_ht_cap_ie_content(void *sel, const u8 *buf, u32 buf_len)
 {
-	if (buf_len != HT_CAP_IE_LEN) {
-		RTW_PRINT_SEL(sel, "Invalid HT capability IE len:%d != %d\n", buf_len, HT_CAP_IE_LEN);
+	if (buf_len != 26) {
+		RTW_PRINT_SEL(sel, "Invalid HT capability IE len:%d != %d\n", buf_len, 26);
 		return;
 	}
 
-	RTW_PRINT_SEL(sel, "cap_info:%02x%02x:%s\n", *(buf), *(buf + 1)
-		, GET_HT_CAP_ELE_CHL_WIDTH(buf) ? " 40MHz" : " 20MHz");
+	RTW_PRINT_SEL(sel, "HT Capabilities Info:%02x%02x\n", *(buf), *(buf + 1));
 	RTW_PRINT_SEL(sel, "A-MPDU Parameters:"HT_AMPDU_PARA_FMT"\n"
 		      , HT_AMPDU_PARA_ARG(HT_CAP_ELE_AMPDU_PARA(buf)));
 	RTW_PRINT_SEL(sel, "Supported MCS Set:"HT_SUP_MCS_SET_FMT"\n"
@@ -1670,47 +1524,18 @@ void dump_ht_cap_ie_content(void *sel, const u8 *buf, u32 buf_len)
 
 void dump_ht_cap_ie(void *sel, const u8 *ie, u32 ie_len)
 {
+	const u8 *pos = ie;
+	u16 id;
+	u16 len;
+
 	const u8 *ht_cap_ie;
 	sint ht_cap_ielen;
 
-	ht_cap_ie = rtw_get_ie(ie, WLAN_EID_HT_CAP, &ht_cap_ielen, ie_len);
+	ht_cap_ie = rtw_get_ie(ie, _HT_CAPABILITY_IE_, &ht_cap_ielen, ie_len);
 	if (!ie || ht_cap_ie != ie)
 		return;
 
 	dump_ht_cap_ie_content(sel, ht_cap_ie + 2, ht_cap_ielen);
-}
-
-const char *const _ht_sc_offset_str[] = {
-	"SCN",
-	"SCA",
-	"SC-RSVD",
-	"SCB",
-};
-
-void dump_ht_op_ie_content(void *sel, const u8 *buf, u32 buf_len)
-{
-	if (buf_len != HT_OP_IE_LEN) {
-		RTW_PRINT_SEL(sel, "Invalid HT operation IE len:%d != %d\n", buf_len, HT_OP_IE_LEN);
-		return;
-	}
-
-	RTW_PRINT_SEL(sel, "ch:%u%s %s\n"
-		, GET_HT_OP_ELE_PRI_CHL(buf)
-		, GET_HT_OP_ELE_STA_CHL_WIDTH(buf) ? "" : " 20MHz only"
-		, ht_sc_offset_str(GET_HT_OP_ELE_2ND_CHL_OFFSET(buf))
-	);
-}
-
-void dump_ht_op_ie(void *sel, const u8 *ie, u32 ie_len)
-{
-	const u8 *ht_op_ie;
-	sint ht_op_ielen;
-
-	ht_op_ie = rtw_get_ie(ie, WLAN_EID_HT_OPERATION, &ht_op_ielen, ie_len);
-	if (!ie || ht_op_ie != ie)
-		return;
-
-	dump_ht_op_ie_content(sel, ht_op_ie + 2, ht_op_ielen);
 }
 #endif /* CONFIG_80211N_HT */
 
@@ -1726,11 +1551,6 @@ void dump_ies(void *sel, const u8 *buf, u32 buf_len)
 		RTW_PRINT_SEL(sel, "%s ID:%u, LEN:%u\n", __FUNCTION__, id, len);
 #ifdef CONFIG_80211N_HT
 		dump_ht_cap_ie(sel, pos, len + 2);
-		dump_ht_op_ie(sel, pos, len + 2);
-#endif
-#ifdef CONFIG_80211AC_VHT
-		dump_vht_cap_ie(sel, pos, len + 2);
-		dump_vht_op_ie(sel, pos, len + 2);
 #endif
 		dump_wps_ie(sel, pos, len + 2);
 #ifdef CONFIG_P2P
@@ -1776,10 +1596,8 @@ void dump_wps_ie(void *sel, const u8 *ie, u32 ie_len)
  * @ch: pointer of ch, used as output
  * @bw: pointer of bw, used as output
  * @offset: pointer of offset, used as output
- * @ht: check HT IEs
- * @vht: check VHT IEs, if true imply ht is true
  */
-void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht)
+void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset)
 {
 	u8 *p;
 	int	ie_len;
@@ -1793,7 +1611,7 @@ void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u
 		*ch = *(p + 2);
 
 #ifdef CONFIG_80211N_HT
-	if (ht || vht) {
+	{
 		u8 *ht_cap_ie, *ht_op_ie;
 		int ht_cap_ielen, ht_op_ielen;
 
@@ -1826,29 +1644,44 @@ void rtw_ies_get_chbw(u8 *ies, int ies_len, u8 *ch, u8 *bw, u8 *offset, u8 ht, u
 				}
 			}
 		}
-
-#ifdef CONFIG_80211AC_VHT
-		if (vht) {
-			u8 *vht_op_ie;
-			int vht_op_ielen;
-
-			vht_op_ie = rtw_get_ie(ies, EID_VHTOperation, &vht_op_ielen, ies_len);
-			if (vht_op_ie && vht_op_ielen) {
-				if (GET_VHT_OPERATION_ELE_CHL_WIDTH(vht_op_ie + 2) >= 1)
-					*bw = CHANNEL_WIDTH_80;
-			}
-		}
-#endif /* CONFIG_80211AC_VHT */
-
 	}
 #endif /* CONFIG_80211N_HT */
+#ifdef CONFIG_80211AC_VHT
+	{
+		u8 *vht_op_ie;
+		int vht_op_ielen;
+
+		vht_op_ie = rtw_get_ie(ies, EID_VHTOperation, &vht_op_ielen, ies_len);
+		if (vht_op_ie && vht_op_ielen) {
+			/* enable VHT 80 before check enable HT40 or not */
+			if (GET_VHT_OPERATION_ELE_CHL_WIDTH(vht_op_ie + 2)  >=  1) {
+				/* for HT40, enable VHT80 */
+				if (*bw == CHANNEL_WIDTH_40)
+					*bw = CHANNEL_WIDTH_80;
+				/* for HT20, enable VHT20 */
+				else if (*bw == CHANNEL_WIDTH_20) {
+					/* modify VHT OP IE */
+					SET_VHT_OPERATION_ELE_CHL_WIDTH(vht_op_ie + 2, 0);
+					/* reset to 0 for VHT20 */
+					SET_VHT_OPERATION_ELE_CHL_CENTER_FREQ1(vht_op_ie + 2, 0);
+					SET_VHT_OPERATION_ELE_CHL_CENTER_FREQ2(vht_op_ie + 2, 0);
+				}
+			} else {
+				/*
+				  VHT OP WIDTH = 0  under HT20/HT40
+				  if REGSTY_BW_5G(pregistrypriv) < CHANNEL_WIDTH_80 in rtw_build_vht_operation_ie
+				*/
+			}
+		}
+	}
+#endif
 }
 
-void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset, u8 ht, u8 vht)
+void rtw_bss_get_chbw(WLAN_BSSID_EX *bss, u8 *ch, u8 *bw, u8 *offset)
 {
 	rtw_ies_get_chbw(bss->IEs + sizeof(NDIS_802_11_FIXED_IEs)
 		, bss->IELength - sizeof(NDIS_802_11_FIXED_IEs)
-		, ch, bw, offset, ht, vht);
+		, ch, bw, offset);
 
 	if (*ch == 0)
 		*ch = bss->Configuration.DSConfig;
@@ -1915,7 +1748,7 @@ void rtw_sync_chbw(u8 *req_ch, u8 *req_bw, u8 *req_offset
 		if (*g_bw == CHANNEL_WIDTH_40 || *g_bw == CHANNEL_WIDTH_80)
 			*req_offset = *g_offset;
 		else if (*g_bw == CHANNEL_WIDTH_20)
-			rtw_get_offset_by_chbw(*req_ch, *req_bw, req_offset);
+			*req_offset = rtw_get_offset_by_ch(*req_ch);
 
 		if (*req_offset == HAL_PRIME_CHNL_OFFSET_DONT_CARE) {
 			RTW_ERR("%s req 80MHz BW without offset, down to 20MHz\n", __func__);
@@ -1927,7 +1760,7 @@ void rtw_sync_chbw(u8 *req_ch, u8 *req_bw, u8 *req_offset
 		if (*g_bw == CHANNEL_WIDTH_40 || *g_bw == CHANNEL_WIDTH_80)
 			*req_offset = *g_offset;
 		else if (*g_bw == CHANNEL_WIDTH_20)
-			rtw_get_offset_by_chbw(*req_ch, *req_bw, req_offset);
+			*req_offset = rtw_get_offset_by_ch(*req_ch);
 
 		if (*req_offset == HAL_PRIME_CHNL_OFFSET_DONT_CARE) {
 			RTW_ERR("%s req 40MHz BW without offset, down to 20MHz\n", __func__);
@@ -1960,7 +1793,7 @@ u32 rtw_get_p2p_merged_ies_len(u8 *in_ie, u32 in_len)
 	PNDIS_802_11_VARIABLE_IEs	pIE;
 	u8 OUI[4] = { 0x50, 0x6f, 0x9a, 0x09 };
 	int i = 0;
-	int len = 0;
+	int j = 0, len = 0;
 
 	while (i < in_len) {
 		pIE = (PNDIS_802_11_VARIABLE_IEs)(in_ie + i);

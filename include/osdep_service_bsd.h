@@ -77,7 +77,7 @@
 //	typedef	spinlock_t	_lock;
 	typedef	struct mtx	_lock;
 	typedef struct mtx 		_mutex;
-	typedef struct rtw_timer_list _timer;
+	typedef struct timer_list _timer;
 	struct list_head {
 	struct list_head *next, *prev;
 	};
@@ -104,7 +104,6 @@
 	typedef void timer_hdl_return;
 	typedef void* timer_hdl_context;
 	typedef struct work_struct _workitem;
-	typedef struct task _tasklet;
 
 #define   KERNEL_VERSION(a,b,c) (((a) << 16) + ((b) << 8) + (c))
 /* emulate a modern version */
@@ -129,7 +128,7 @@
  * See (linux_compat) processes.c
  *
  */
-struct rtw_timer_list {
+struct timer_list {
 	struct callout callout;
 	void (*function)(void *);
 	void *arg;

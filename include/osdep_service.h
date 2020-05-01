@@ -24,9 +24,6 @@
 #define RTW_RBUF_UNAVAIL		5
 #define RTW_RBUF_PKT_UNAVAIL	6
 #define RTW_SDIO_READ_PORT_FAIL	7
-#define RTW_ALREADY				8
-#define RTW_RA_RESOLVING		9
-#define RTW_BMC_NO_NEED			10
 
 /* #define RTW_STATUS_TIMEDOUT -110 */
 
@@ -48,17 +45,14 @@
 	#include <linux/sched/types.h>
 #endif
 	#include <osdep_service_linux.h>
-	#include <drv_types_linux.h>
 #endif
 
 #ifdef PLATFORM_OS_XP
 	#include <osdep_service_xp.h>
-	#include <drv_types_xp.h>
 #endif
 
 #ifdef PLATFORM_OS_CE
 	#include <osdep_service_ce.h>
-	#include <drv_types_ce.h>
 #endif
 
 /* #include <rtw_byteorder.h> */
@@ -66,8 +60,6 @@
 #ifndef BIT
 	#define BIT(x)	(1 << (x))
 #endif
-
-#define CHECK_BIT(a, b) (!!((a) & (b)))
 
 #define BIT0	0x00000001
 #define BIT1	0x00000002
@@ -145,7 +137,6 @@ typedef enum mstat_status {
 #ifdef DBG_MEM_ALLOC
 void rtw_mstat_update(const enum mstat_f flags, const MSTAT_STATUS status, u32 sz);
 void rtw_mstat_dump(void *sel);
-bool match_mstat_sniff_rules(const enum mstat_f flags, const size_t size);
 void *dbg_rtw_vmalloc(u32 sz, const enum mstat_f flags, const char *func, const int line);
 void *dbg_rtw_zvmalloc(u32 sz, const enum mstat_f flags, const char *func, const int line);
 void dbg_rtw_vmfree(void *pbuf, const enum mstat_f flags, u32 sz, const char *func, const int line);
@@ -218,7 +209,6 @@ void dbg_rtw_usb_buffer_free(struct usb_device *dev, size_t size, void *addr, dm
 #else /* DBG_MEM_ALLOC */
 #define rtw_mstat_update(flag, status, sz) do {} while (0)
 #define rtw_mstat_dump(sel) do {} while (0)
-#define match_mstat_sniff_rules(flags, size) _FALSE
 void *_rtw_vmalloc(u32 sz);
 void *_rtw_zvmalloc(u32 sz);
 void _rtw_vmfree(void *pbuf, u32 sz);
@@ -294,7 +284,6 @@ extern void	*rtw_malloc2d(int h, int w, size_t size);
 extern void	rtw_mfree2d(void *pbuf, int h, int w, int size);
 
 void rtw_os_pkt_free(_pkt *pkt);
-_pkt *rtw_os_pkt_copy(_pkt *pkt);
 void *rtw_os_pkt_data(_pkt *pkt);
 u32 rtw_os_pkt_len(_pkt *pkt);
 
@@ -307,19 +296,9 @@ extern void	_rtw_init_listhead(_list *list);
 extern u32	rtw_is_list_empty(_list *phead);
 extern void	rtw_list_insert_head(_list *plist, _list *phead);
 extern void	rtw_list_insert_tail(_list *plist, _list *phead);
-void rtw_list_splice(_list *list, _list *head);
-void rtw_list_splice_init(_list *list, _list *head);
-void rtw_list_splice_tail(_list *list, _list *head);
-
 #ifndef PLATFORM_FREEBSD
 extern void	rtw_list_delete(_list *plist);
 #endif /* PLATFORM_FREEBSD */
-
-void rtw_hlist_head_init(rtw_hlist_head *h);
-void rtw_hlist_add_head(rtw_hlist_node *n, rtw_hlist_head *h);
-void rtw_hlist_del(rtw_hlist_node *n);
-void rtw_hlist_add_head_rcu(rtw_hlist_node *n, rtw_hlist_head *h);
-void rtw_hlist_del_rcu(rtw_hlist_node *n);
 
 extern void	_rtw_init_sema(_sema *sema, int init_val);
 extern void	_rtw_free_sema(_sema	*sema);
@@ -392,8 +371,9 @@ extern void	rtw_udelay_os(int us);
 extern void rtw_yield_os(void);
 
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
 extern void rtw_init_timer(_timer *ptimer, void *padapter, void *pfunc, void *ctx);
-
+#endif
 
 __inline static unsigned char _cancel_timer_ex(_timer *ptimer)
 {
@@ -583,7 +563,6 @@ static inline int largest_bit(u32 bitmask)
 	return i;
 }
 
-#define rtw_abs(a) (a < 0 ? -a : a)
 #define rtw_min(a, b) ((a > b) ? b : a)
 #define rtw_is_range_a_in_b(hi_a, lo_a, hi_b, lo_b) (((hi_a) <= (hi_b)) && ((lo_a) >= (lo_b)))
 #define rtw_is_range_overlap(hi_a, lo_a, hi_b, lo_b) (((hi_a) > (lo_b)) && ((lo_a) < (hi_b)))
@@ -595,24 +574,22 @@ static inline int largest_bit(u32 bitmask)
 #define MAC_ARG(x) ((u8 *)(x))[0], ((u8 *)(x))[1], ((u8 *)(x))[2], ((u8 *)(x))[3], ((u8 *)(x))[4], ((u8 *)(x))[5]
 #endif
 
-bool rtw_macaddr_is_larger(const u8 *a, const u8 *b);
 
 extern void rtw_suspend_lock_init(void);
 extern void rtw_suspend_lock_uninit(void);
 extern void rtw_lock_suspend(void);
 extern void rtw_unlock_suspend(void);
 extern void rtw_lock_suspend_timeout(u32 timeout_ms);
+extern void rtw_lock_ext_suspend_timeout(u32 timeout_ms);
+extern void rtw_lock_rx_suspend_timeout(u32 timeout_ms);
 extern void rtw_lock_traffic_suspend_timeout(u32 timeout_ms);
+extern void rtw_lock_resume_scan_timeout(u32 timeout_ms);
 extern void rtw_resume_lock_suspend(void);
 extern void rtw_resume_unlock_suspend(void);
 #ifdef CONFIG_AP_WOWLAN
 extern void rtw_softap_lock_suspend(void);
 extern void rtw_softap_unlock_suspend(void);
 #endif
-
-extern void rtw_set_bit(int nr, unsigned long *addr);
-extern void rtw_clear_bit(int nr, unsigned long *addr);
-extern int rtw_test_and_clear_bit(int nr, unsigned long *addr);
 
 extern void ATOMIC_SET(ATOMIC_T *v, int i);
 extern int ATOMIC_READ(ATOMIC_T *v);
@@ -624,12 +601,10 @@ extern int ATOMIC_ADD_RETURN(ATOMIC_T *v, int i);
 extern int ATOMIC_SUB_RETURN(ATOMIC_T *v, int i);
 extern int ATOMIC_INC_RETURN(ATOMIC_T *v);
 extern int ATOMIC_DEC_RETURN(ATOMIC_T *v);
-extern bool ATOMIC_INC_UNLESS(ATOMIC_T *v, int u);
 
 /* File operation APIs, just for linux now */
 extern int rtw_is_file_readable(const char *path);
 extern int rtw_is_file_readable_with_size(const char *path, u32 *sz);
-extern int rtw_readable_file_sz_chk(const char *path, u32 sz);
 extern int rtw_retrieve_from_file(const char *path, u8 *buf, u32 sz);
 extern int rtw_store_to_file(const char *path, u8 *buf, u32 sz);
 
@@ -762,18 +737,6 @@ struct map_t {
 int map_readN(const struct map_t *map, u16 offset, u16 len, u8 *buf);
 u8 map_read8(const struct map_t *map, u16 offset);
 
-struct blacklist_ent {
-	_list list;
-	u8 addr[ETH_ALEN];
-	systime exp_time;
-};
-
-int rtw_blacklist_add(_queue *blist, const u8 *addr, u32 timeout_ms);
-int rtw_blacklist_del(_queue *blist, const u8 *addr);
-int rtw_blacklist_search(_queue *blist, const u8 *addr);
-void rtw_blacklist_flush(_queue *blist);
-void dump_blacklist(void *sel, _queue *blist, const char *title);
-
 /* String handler */
 
 BOOLEAN is_null(char c);
@@ -783,10 +746,6 @@ BOOLEAN is_space(char c);
 BOOLEAN IsHexDigit(char chTmp);
 BOOLEAN is_alpha(char chTmp);
 char alpha_to_upper(char c);
-
-int hex2num_i(char c);
-int hex2byte_i(const char *hex);
-int hexstr2bin(const char *hex, u8 *buf, size_t len);
 
 /*
  * Write formatted output to sized buffer

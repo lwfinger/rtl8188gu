@@ -27,18 +27,17 @@ int usbctrl_vendorreq(struct intf_hdl *pintfhdl, u8 request, u16 value, u16 inde
 {
 	_adapter	*padapter = pintfhdl->padapter;
 	struct dvobj_priv  *pdvobjpriv = adapter_to_dvobj(padapter);
+	struct pwrctrl_priv *pwrctl = dvobj_to_pwrctl(pdvobjpriv);
 	struct usb_device *udev = pdvobjpriv->pusbdev;
 
 	unsigned int pipe;
 	int status = 0;
-#ifdef CONFIG_USB_VENDOR_REQ_BUFFER_DYNAMIC_ALLOCATE
 	u32 tmp_buflen = 0;
-#endif
 	u8 reqtype;
 	u8 *pIo_buf;
 	int vendorreq_times = 0;
 
-#if (defined(CONFIG_RTL8822B) || defined(CONFIG_RTL8821C)) || defined(CONFIG_RTL8822C)
+#if (defined(CONFIG_RTL8822B) || defined(CONFIG_RTL8821C))
 #define REG_ON_SEC 0x00
 #define REG_OFF_SEC 0x01
 #define REG_LOCAL_SEC 0x02
@@ -48,9 +47,7 @@ int usbctrl_vendorreq(struct intf_hdl *pintfhdl, u8 request, u16 value, u16 inde
 #ifdef CONFIG_USB_VENDOR_REQ_BUFFER_DYNAMIC_ALLOCATE
 	u8 *tmp_buf;
 #else /* use stack memory */
-	#ifndef CONFIG_USB_VENDOR_REQ_BUFFER_PREALLOC
 	u8 tmp_buf[MAX_USB_IO_CTL_SIZE];
-	#endif
 #endif
 
 	/* RTW_INFO("%s %s:%d\n",__FUNCTION__, current->comm, current->pid); */
@@ -67,7 +64,7 @@ int usbctrl_vendorreq(struct intf_hdl *pintfhdl, u8 request, u16 value, u16 inde
 	}
 
 #ifdef CONFIG_USB_VENDOR_REQ_MUTEX
-	_enter_critical_mutex_lock(&pdvobjpriv->usb_vendor_req_mutex, NULL);
+	_enter_critical_mutex(&pdvobjpriv->usb_vendor_req_mutex, NULL);
 #endif
 
 
@@ -105,7 +102,8 @@ int usbctrl_vendorreq(struct intf_hdl *pintfhdl, u8 request, u16 value, u16 inde
 			reqtype =  REALTEK_USB_VENQT_WRITE;
 			_rtw_memcpy(pIo_buf, pdata, len);
 		}
-
+//RTW_INFO("Peter : usbctrl_vendorreq : pipe = %u request=0x%x  request_type=0x%x  addr=0x%x  index=%u  len=%u  data=0x%x \n", 
+	//pipe, request, reqtype, value, index, len, *(u32 *)pdata);
 		status = rtw_usb_control_msg(udev, pipe, request, reqtype, value, index, pIo_buf, len, RTW_USB_CONTROL_MSG_TIMEOUT);
 
 		if (status == len) {  /* Success this control transfer. */
@@ -151,7 +149,7 @@ int usbctrl_vendorreq(struct intf_hdl *pintfhdl, u8 request, u16 value, u16 inde
 
 	}
 
-#if (defined(CONFIG_RTL8822B) || defined(CONFIG_RTL8821C)) || defined(CONFIG_RTL8822C)
+#if (defined(CONFIG_RTL8822B) || defined(CONFIG_RTL8821C))
 	if (value < 0xFE00) {
 		if (0x00 <= value && value <= 0xff)
 			current_reg_sec = REG_ON_SEC;
@@ -276,19 +274,15 @@ unsigned int ffaddr2pipehdl(struct dvobj_priv *pdvobj, u32 addr)
 	else if (addr == RECV_INT_IN_ADDR)
 		pipe = usb_rcvintpipe(pusbd, pdvobj->RtInPipe[1]);
 
+	else if (addr < HW_QUEUE_ENTRY) {
 #ifdef RTW_HALMAC
-         /* halmac already translate queue id to bulk out id (addr 0~3) */
-        else if (addr < 4) {
-                ep_num = pdvobj->RtOutPipe[addr];
-                pipe = usb_sndbulkpipe(pusbd, ep_num);
-        }
+		/* halmac already translate queue id to bulk out id */
+		ep_num = pdvobj->RtOutPipe[addr];
 #else
-        else if (addr < HW_QUEUE_ENTRY) {
-                ep_num = pdvobj->Queue2Pipe[addr];
-                pipe = usb_sndbulkpipe(pusbd, ep_num);
-        }
+		ep_num = pdvobj->Queue2Pipe[addr];
 #endif
-
+		pipe = usb_sndbulkpipe(pusbd, ep_num);
+	}
 
 	return pipe;
 }
@@ -299,7 +293,7 @@ struct zero_bulkout_context {
 	void *pirp;
 	void *padapter;
 };
-#if 0
+
 static void usb_bulkout_zero_complete(struct urb *purb, struct pt_regs *regs)
 {
 	struct zero_bulkout_context *pcontext = (struct zero_bulkout_context *)purb->context;
@@ -329,6 +323,7 @@ static u32 usb_bulkout_zero(struct intf_hdl *pintfhdl, u32 addr)
 	PURB	purb = NULL;
 	_adapter *padapter = (_adapter *)pintfhdl->padapter;
 	struct dvobj_priv *pdvobj = adapter_to_dvobj(padapter);
+	struct pwrctrl_priv *pwrctl = dvobj_to_pwrctl(pdvobj);
 	struct usb_device *pusbd = pdvobj->pusbdev;
 
 	/* RTW_INFO("%s\n", __func__); */
@@ -375,7 +370,7 @@ static u32 usb_bulkout_zero(struct intf_hdl *pintfhdl, u32 addr)
 	return _SUCCESS;
 
 }
-#endif
+
 void usb_read_mem(struct intf_hdl *pintfhdl, u32 addr, u32 cnt, u8 *rmem)
 {
 
@@ -413,6 +408,7 @@ void usb_read_port_cancel(struct intf_hdl *pintfhdl)
 static void usb_write_port_complete(struct urb *purb, struct pt_regs *regs)
 {
 	_irqL irqL;
+	int i;
 	struct xmit_buf *pxmitbuf = (struct xmit_buf *)purb->context;
 	/* struct xmit_frame *pxmitframe = (struct xmit_frame *)pxmitbuf->priv_data; */
 	/* _adapter			*padapter = pxmitframe->padapter; */
@@ -550,14 +546,18 @@ u32 usb_write_port(struct intf_hdl *pintfhdl, u32 addr, u32 cnt, u8 *wmem)
 	_irqL irqL;
 	unsigned int pipe;
 	int status;
-	u32 ret = _FAIL;
+	u32 ret = _FAIL, bwritezero = _FALSE;
 	PURB	purb = NULL;
 	_adapter *padapter = (_adapter *)pintfhdl->padapter;
 	struct dvobj_priv	*pdvobj = adapter_to_dvobj(padapter);
+	struct pwrctrl_priv *pwrctl = dvobj_to_pwrctl(pdvobj);
 	struct xmit_priv	*pxmitpriv = &padapter->xmitpriv;
 	struct xmit_buf *pxmitbuf = (struct xmit_buf *)wmem;
 	struct xmit_frame *pxmitframe = (struct xmit_frame *)pxmitbuf->priv_data;
 	struct usb_device *pusbd = pdvobj->pusbdev;
+	struct pkt_attrib *pattrib = &pxmitframe->attrib;
+
+
 
 	if (RTW_CANNOT_TX(padapter)) {
 #ifdef DBG_TX
@@ -986,6 +986,7 @@ u32 usb_read_port(struct intf_hdl *pintfhdl, u32 addr, u32 cnt, u8 *rmem)
 	struct recv_buf	*precvbuf = (struct recv_buf *)rmem;
 	_adapter		*adapter = pintfhdl->padapter;
 	struct dvobj_priv	*pdvobj = adapter_to_dvobj(adapter);
+	struct pwrctrl_priv *pwrctl = dvobj_to_pwrctl(pdvobj);
 	struct recv_priv	*precvpriv = &adapter->recvpriv;
 	struct usb_device	*pusbd = pdvobj->pusbdev;
 
