@@ -433,6 +433,9 @@ s32 rtl8710b_FirmwareDownload(PADAPTER padapter, BOOLEAN  bUsedWoWLANFw)
 		 pHalData->firmware_sub_version, pHalData->FirmwareSignature
 		 , pFwHdr->Month, pFwHdr->Date, pFwHdr->Hour, pFwHdr->Minute);
 
+	pr_info("***** VendorType 0x%x\n",pHalData->version_id.VendorType);
+	pr_info("***** FirmwareSignature 0x%x\n", pHalData->FirmwareSignature);
+
 	if ((pHalData->version_id.VendorType == CHIP_VENDOR_UMC
 		&& pHalData->FirmwareSignature == 0x10B2) ||
 		(pHalData->version_id.VendorType == CHIP_VENDOR_SMIC
