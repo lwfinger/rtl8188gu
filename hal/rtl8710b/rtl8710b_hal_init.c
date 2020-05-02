@@ -330,25 +330,6 @@ s32 rtl8710b_FirmwareDownload(PADAPTER padapter, BOOLEAN  bUsedWoWLANFw)
 		rtStatus = _FAIL;
 		goto exit;
 	}
-#if 0
-	{
-		u8 tmp_ps = 0, tmp_rf = 0;
-
-		tmp_ps = rtw_read8(padapter, 0xa3);
-		tmp_ps &= 0xf8;
-		tmp_ps |= 0x02;
-		/* 1. write 0xA3[:2:0] = 3b'010 */
-		rtw_write8(padapter, 0xa3, tmp_ps);
-		/* 2. read power_state = 0xA0[1:0] */
-		tmp_ps = rtw_read8(padapter, 0xa0);
-		tmp_ps &= 0x03;
-		if (tmp_ps != 0x01) {
-			RTW_INFO(FUNC_ADPT_FMT" tmp_ps=%x\n",
-				 FUNC_ADPT_ARG(padapter), tmp_ps);
-			pdbgpriv->dbg_downloadfw_pwr_state_cnt++;
-		}
-	}
-#endif
 
 #ifdef CONFIG_FILE_FWIMG
 #ifdef CONFIG_WOWLAN
@@ -433,9 +414,7 @@ s32 rtl8710b_FirmwareDownload(PADAPTER padapter, BOOLEAN  bUsedWoWLANFw)
 		 pHalData->firmware_sub_version, pHalData->FirmwareSignature
 		 , pFwHdr->Month, pFwHdr->Date, pFwHdr->Hour, pFwHdr->Minute);
 
-	pr_info("***** VendorType 0x%x\n",pHalData->version_id.VendorType);
-	pr_info("***** FirmwareSignature 0x%x\n", pHalData->FirmwareSignature);
-
+#if 0
 	if ((pHalData->version_id.VendorType == CHIP_VENDOR_UMC
 		&& pHalData->FirmwareSignature == 0x10B2) ||
 		(pHalData->version_id.VendorType == CHIP_VENDOR_SMIC
@@ -447,14 +426,10 @@ s32 rtl8710b_FirmwareDownload(PADAPTER padapter, BOOLEAN  bUsedWoWLANFw)
 	} else {
 		RTW_INFO("%s: Error! No shift for fw header! %04x\n", __FUNCTION__, pHalData->FirmwareSignature);
 	}
-#if 0
-	if (IS_FW_HEADER_EXIST_8710B(pFwHdr, pHalData->version_id)) {
-		RTW_INFO("%s(): Shift for fw header!\n", __FUNCTION__);
-		/* Shift 32 bytes for FW header */
-		pFirmwareBuf = pFirmwareBuf + 32;
-		FirmwareLen = FirmwareLen - 32;
-	}
 #endif
+	/* Shift 32 bytes for FW header */
+	pFirmwareBuf = pFirmwareBuf + 32;
+	FirmwareLen = FirmwareLen - 32;
 
 	fwdl_start_time = rtw_get_current_time();
 
@@ -3636,12 +3611,12 @@ u8 SetHwReg8710B(PADAPTER padapter, u8 variable, u8 *val)
 				/* ulContent |= CAM_VALID; */
 			} else
 				ulContent = 0;
-				/* polling bit, and No Write enable, and address */
-				ulCommand = CAM_CONTENT_COUNT * ucIndex + i;
-				ulCommand = ulCommand | CAM_POLLINIG | CAM_WRITE;
-				/* write content 0 is equall to mark invalid */
-				rtw_write32(padapter, WCAMI, ulContent);  /* delay_ms(40); */
-				rtw_write32(padapter, RWCAM, ulCommand);  /* delay_ms(40); */
+			/* polling bit, and No Write enable, and address */
+			ulCommand = CAM_CONTENT_COUNT * ucIndex + i;
+			ulCommand = ulCommand | CAM_POLLINIG | CAM_WRITE;
+			/* write content 0 is equall to mark invalid */
+			rtw_write32(padapter, WCAMI, ulContent);  /* delay_ms(40); */
+			rtw_write32(padapter, RWCAM, ulCommand);  /* delay_ms(40); */
 		}
 	}
 		break;
