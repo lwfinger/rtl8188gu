@@ -240,6 +240,8 @@ static s32 _FWFreeToGo(_adapter *adapter, u32 min_cnt, u32 timeout_ms)
 		rtw_yield_os();
 	} while (rtw_get_passing_time_ms(start) < timeout_ms || cnt < min_cnt);
 
+	pr_info("***** value_to_check 0x%x, value_expected 0x%x\n", value_to_check, value_expected);
+
 	if (value_to_check != value_expected)
 		goto exit;
 
