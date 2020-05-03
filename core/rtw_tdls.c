@@ -439,7 +439,7 @@ void rtw_tdls_process_ht_cap(_adapter *padapter, struct sta_info *ptdls_sta, u8 
 	}
 
 	if (ptdls_sta->flags & WLAN_STA_HT) {
-		if (padapter->registrypriv.ht_enable == _TRUE) {
+		if (padapter->registrypriv.ht_enable == _TRUE && is_supported_ht(padapter->registrypriv.wireless_mode) ) {
 			ptdls_sta->htpriv.ht_option = _TRUE;
 			ptdls_sta->qos_option = _TRUE;
 		} else {
@@ -559,7 +559,7 @@ void rtw_tdls_process_vht_cap(_adapter *padapter, struct sta_info *ptdls_sta, u8
 
 	if (ptdls_sta->flags & WLAN_STA_VHT) {
 		if (REGSTY_IS_11AC_ENABLE(&padapter->registrypriv)
-		    && hal_chk_proto_cap(padapter, PROTO_CAP_11AC)
+		    && is_supported_vht(padapter->registrypriv.wireless_mode)
 		    && (!rfctl->country_ent || COUNTRY_CHPLAN_EN_11AC(rfctl->country_ent)))
 			ptdls_sta->vhtpriv.vht_option = _TRUE;
 		else
@@ -927,6 +927,20 @@ u8 *rtw_tdls_set_ch_sw(u8 *pframe, struct pkt_attrib *pattrib, struct sta_info *
 
 void rtw_tdls_set_ch_sw_oper_control(_adapter *padapter, u8 enable)
 {
+	HAL_DATA_TYPE *pHalData = GET_HAL_DATA(padapter);
+
+	if (enable == _TRUE) {
+#ifdef CONFIG_TDLS_CH_SW_V2
+		pHalData->ch_switch_offload = _TRUE;
+#endif
+
+#ifdef CONFIG_TDLS_CH_SW_BY_DRV
+		pHalData->ch_switch_offload = _FALSE;
+#endif
+	}
+	else
+		pHalData->ch_switch_offload = _FALSE;
+	
 	if (ATOMIC_READ(&padapter->tdlsinfo.chsw_info.chsw_on) != enable)
 		ATOMIC_SET(&padapter->tdlsinfo.chsw_info.chsw_on, enable);
 
@@ -979,8 +993,8 @@ s32 rtw_tdls_do_ch_sw(_adapter *padapter, struct sta_info *ptdls_sta, u8 chnl_ty
 
 	/* set mac_id sleep before channel switch */
 	rtw_hal_macid_sleep(padapter, ptdls_sta->cmn.mac_id);
-	
-#ifdef CONFIG_TDLS_CH_SW_BY_DRV
+
+#if defined(CONFIG_TDLS_CH_SW_BY_DRV) || defined(CONFIG_TDLS_CH_SW_V2)
 	set_channel_bwmode(padapter, channel, channel_offset, bwmode);
 	ret = _SUCCESS;
 #else
@@ -2360,7 +2374,7 @@ int On_TDLS_Dis_Req(_adapter *padapter, union recv_frame *precv_frame)
 			if (psta_ap == NULL)
 				goto exit;
 			dst = pIE->data + 12;
-			if (MacAddr_isBcst(dst) == _FALSE && (_rtw_memcmp(adapter_mac_addr(padapter), dst, 6) == _FALSE))
+			if (MacAddr_isBcst(dst) == _FALSE && (_rtw_memcmp(adapter_mac_addr(padapter), dst, ETH_ALEN) == _FALSE))
 				goto exit;
 			break;
 		default:
@@ -2839,7 +2853,7 @@ void rtw_build_tdls_setup_req_ies(_adapter *padapter, struct xmit_frame *pxmitfr
 #ifdef CONFIG_80211AC_VHT
 	if ((padapter->mlmepriv.htpriv.ht_option == _TRUE) && (pmlmeext->cur_channel > 14)
 	    && REGSTY_IS_11AC_ENABLE(pregistrypriv)
-	    && hal_chk_proto_cap(padapter, PROTO_CAP_11AC)
+	    && is_supported_vht(pregistrypriv->wireless_mode)
 	    && (!rfctl->country_ent || COUNTRY_CHPLAN_EN_11AC(rfctl->country_ent))
 	   ) {
 		pframe = rtw_tdls_set_aid(padapter, pframe, pattrib);
@@ -2934,7 +2948,7 @@ void rtw_build_tdls_setup_rsp_ies(_adapter *padapter, struct xmit_frame *pxmitfr
 #ifdef CONFIG_80211AC_VHT
 	if ((padapter->mlmepriv.htpriv.ht_option == _TRUE) && (pmlmeext->cur_channel > 14)
 	    && REGSTY_IS_11AC_ENABLE(pregistrypriv)
-	    && hal_chk_proto_cap(padapter, PROTO_CAP_11AC)
+	    && is_supported_vht(pregistrypriv->wireless_mode)
 	    && (!rfctl->country_ent || COUNTRY_CHPLAN_EN_11AC(rfctl->country_ent))
 	   ) {
 		pframe = rtw_tdls_set_aid(padapter, pframe, pattrib);
@@ -3011,7 +3025,7 @@ void rtw_build_tdls_setup_cfm_ies(_adapter *padapter, struct xmit_frame *pxmitfr
 	if ((padapter->mlmepriv.htpriv.ht_option == _TRUE)
 	    && (ptdls_sta->vhtpriv.vht_option == _TRUE) && (pmlmeext->cur_channel > 14)
 	    && REGSTY_IS_11AC_ENABLE(pregistrypriv)
-	    && hal_chk_proto_cap(padapter, PROTO_CAP_11AC)
+	    && is_supported_vht(pregistrypriv->wireless_mode)
 	    && (!rfctl->country_ent || COUNTRY_CHPLAN_EN_11AC(rfctl->country_ent))
 	   ) {
 		pframe = rtw_tdls_set_vht_operation(padapter, pframe, pattrib, pmlmeext->cur_channel);

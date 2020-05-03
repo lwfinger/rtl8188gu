@@ -119,7 +119,7 @@ SwLedBlink1(
 {
 	_adapter				*padapter = pLed->padapter;
 	PHAL_DATA_TYPE		pHalData = GET_HAL_DATA(padapter);
-	struct led_priv		*ledpriv = &(padapter->ledpriv);
+	struct led_priv		*ledpriv = adapter_to_led(padapter);
 	struct mlme_priv		*pmlmepriv = &(padapter->mlmepriv);
 	PLED_USB			pLed1 = &(ledpriv->SwLed1);
 	u8					bStopBlinking = _FALSE;
@@ -507,7 +507,7 @@ SwLedBlink4(
 )
 {
 	_adapter			*padapter = pLed->padapter;
-	struct led_priv	*ledpriv = &(padapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(padapter);
 	struct mlme_priv	*pmlmepriv = &(padapter->mlmepriv);
 	PLED_USB		pLed1 = &(ledpriv->SwLed1);
 	u8				bStopBlinking = _FALSE;
@@ -1479,9 +1479,9 @@ SwLedBlink12(
 
 }
 
-VOID
+void
 SwLedBlink13(
-	IN PLED_USB			pLed
+	PLED_USB			pLed
 )
 {
 	PADAPTER Adapter = pLed->padapter;
@@ -1540,9 +1540,9 @@ SwLedBlink13(
 
 }
 
-VOID
+void
 SwLedBlink14(
-	IN PLED_USB			pLed
+	PLED_USB			pLed
 )
 {
 	PADAPTER Adapter = pLed->padapter;
@@ -1597,9 +1597,9 @@ SwLedBlink14(
 
 }
 
-VOID
+void
 SwLedBlink15(
-	IN PLED_USB			pLed
+	PLED_USB			pLed
 )
 {
 	PADAPTER Adapter = pLed->padapter;
@@ -1733,7 +1733,7 @@ SwLedBlink15(
 void BlinkHandler(PLED_USB pLed)
 {
 	_adapter		*padapter = pLed->padapter;
-	struct led_priv	*ledpriv = &(padapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(padapter);
 
 	/* RTW_INFO("%s (%s:%d)\n",__FUNCTION__, current->comm, current->pid); */
 
@@ -1746,6 +1746,12 @@ void BlinkHandler(PLED_USB pLed)
 	}
 
 	switch (ledpriv->LedStrategy) {
+	#if CONFIG_RTW_SW_LED_TRX_DA_CLASSIFY
+	case SW_LED_MODE_UC_TRX_ONLY:
+		rtw_sw_led_blink_uc_trx_only(pLed);
+		break;
+	#endif
+
 	case SW_LED_MODE0:
 		SwLedBlink(pLed);
 		break;
@@ -1821,17 +1827,9 @@ void BlinkHandler(PLED_USB pLed)
  *		Callback function of LED BlinkTimer,
  *		it just schedules to corresponding BlinkWorkItem/led_blink_hdl
  *   */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
 void BlinkTimerCallback(void *data)
-#else
-void BlinkTimerCallback(struct timer_list *t)
-#endif
 {
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
 	PLED_USB	 pLed = (PLED_USB)data;
-#else
-	PLED_USB pLed = from_timer(pLed, t, BlinkTimer);
-#endif
 	_adapter		*padapter = pLed->padapter;
 
 	/* RTW_INFO("%s\n", __FUNCTION__); */
@@ -1845,7 +1843,7 @@ void BlinkTimerCallback(struct timer_list *t)
 	}
 
 #ifdef CONFIG_RTW_LED_HANDLED_BY_CMD_THREAD
-	rtw_led_blink_cmd(padapter, (PVOID)pLed);
+	rtw_led_blink_cmd(padapter, (void *)pLed);
 #else
 	_set_workitem(&(pLed->BlinkWorkItem));
 #endif
@@ -1868,7 +1866,7 @@ SwLedControlMode0(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(padapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(padapter);
 	PLED_USB	pLed = &(ledpriv->SwLed1);
 
 	/* Decide led state */
@@ -1970,7 +1968,7 @@ SwLedControlMode1(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv		*ledpriv = &(padapter->ledpriv);
+	struct led_priv		*ledpriv = adapter_to_led(padapter);
 	PLED_USB			pLed = &(ledpriv->SwLed0);
 	struct mlme_priv		*pmlmepriv = &(padapter->mlmepriv);
 	PHAL_DATA_TYPE		pHalData = GET_HAL_DATA(padapter);
@@ -2207,7 +2205,7 @@ SwLedControlMode2(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(padapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(padapter);
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
 	PLED_USB		pLed = &(ledpriv->SwLed0);
 
@@ -2346,7 +2344,7 @@ SwLedControlMode3(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(padapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(padapter);
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
 	PLED_USB		pLed = &(ledpriv->SwLed0);
 
@@ -2501,7 +2499,7 @@ SwLedControlMode4(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(padapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(padapter);
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
 	PLED_USB		pLed = &(ledpriv->SwLed0);
 	PLED_USB		pLed1 = &(ledpriv->SwLed1);
@@ -2806,7 +2804,7 @@ SwLedControlMode5(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(padapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(padapter);
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
 	PHAL_DATA_TYPE	pHalData = GET_HAL_DATA(padapter);
 	PLED_USB		pLed = &(ledpriv->SwLed0);
@@ -2885,7 +2883,7 @@ SwLedControlMode6(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(padapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(padapter);
 	struct mlme_priv	*pmlmepriv = &padapter->mlmepriv;
 	PLED_USB	pLed0 = &(ledpriv->SwLed0);
 
@@ -2916,7 +2914,7 @@ SwLedControlMode7(
 	LED_CTL_MODE		 LedAction
 )
 {
-	struct led_priv	*ledpriv = &(Adapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(Adapter);
 	struct mlme_priv	*pmlmepriv = &Adapter->mlmepriv;
 	PLED_USB	pLed = &(ledpriv->SwLed0);
 
@@ -3055,7 +3053,7 @@ SwLedControlMode8(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(Adapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(Adapter);
 	struct mlme_priv	*pmlmepriv = &Adapter->mlmepriv;
 	PLED_USB	pLed0 = &(ledpriv->SwLed0);
 
@@ -3088,11 +3086,11 @@ SwLedControlMode8(
 /* page added for Belkin AC950, 20120813 */
 void
 SwLedControlMode9(
-	IN	PADAPTER			Adapter,
-	IN	LED_CTL_MODE		LedAction
+		PADAPTER			Adapter,
+		LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(Adapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(Adapter);
 	struct mlme_priv	*pmlmepriv = &Adapter->mlmepriv;
 	PLED_USB	pLed = &(ledpriv->SwLed0);
 	PLED_USB	pLed1 = &(ledpriv->SwLed1);
@@ -3395,7 +3393,7 @@ SwLedControlMode10(
 )
 {
 	HAL_DATA_TYPE	*pHalData = GET_HAL_DATA(Adapter);
-	struct led_priv	*ledpriv = &(Adapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(Adapter);
 	struct mlme_priv	*pmlmepriv = &Adapter->mlmepriv;
 	PLED_USB	pLed = &(ledpriv->SwLed0);
 	PLED_USB	pLed1 = &(ledpriv->SwLed1);
@@ -3592,7 +3590,7 @@ SwLedControlMode11(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(Adapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(Adapter);
 	struct mlme_priv	*pmlmepriv = &Adapter->mlmepriv;
 	PLED_USB	pLed = &(ledpriv->SwLed0);
 
@@ -3685,13 +3683,13 @@ SwLedControlMode11(
 
 /* page added for NEC */
 
-VOID
+void
 SwLedControlMode12(
 	PADAPTER			Adapter,
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(Adapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(Adapter);
 	struct mlme_priv	*pmlmepriv = &Adapter->mlmepriv;
 	PLED_USB	pLed = &(ledpriv->SwLed0);
 
@@ -3766,13 +3764,13 @@ SwLedControlMode12(
 
 /* Maddest add for NETGEAR R6100 */
 
-VOID
+void
 SwLedControlMode13(
-	IN	PADAPTER			Adapter,
-	IN	LED_CTL_MODE		LedAction
+		PADAPTER			Adapter,
+		LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(Adapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(Adapter);
 	struct mlme_priv	*pmlmepriv = &Adapter->mlmepriv;
 	PLED_USB	pLed = &(ledpriv->SwLed0);
 
@@ -3912,13 +3910,13 @@ SwLedControlMode13(
 
 /* Maddest add for DNI Buffalo */
 
-VOID
+void
 SwLedControlMode14(
-	IN	PADAPTER			Adapter,
-	IN	LED_CTL_MODE		LedAction
+		PADAPTER			Adapter,
+		LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(Adapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(Adapter);
 	PLED_USB	pLed = &(ledpriv->SwLed0);
 
 	switch (LedAction) {
@@ -3971,13 +3969,13 @@ SwLedControlMode14(
 
 /* Maddest add for Dlink */
 
-VOID
+void
 SwLedControlMode15(
-	IN	PADAPTER			Adapter,
-	IN	LED_CTL_MODE		LedAction
+		PADAPTER			Adapter,
+		LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(Adapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(Adapter);
 	struct mlme_priv	*pmlmepriv = &Adapter->mlmepriv;
 	PLED_USB	pLed = &(ledpriv->SwLed0);
 
@@ -4126,7 +4124,7 @@ LedControlUSB(
 	LED_CTL_MODE		LedAction
 )
 {
-	struct led_priv	*ledpriv = &(padapter->ledpriv);
+	struct led_priv	*ledpriv = adapter_to_led(padapter);
 
 #if (MP_DRIVER == 1)
 	if (padapter->registrypriv.mp_mode == 1)
@@ -4147,11 +4145,6 @@ LedControlUSB(
 	/* if(priv->bInHctTest) */
 	/*	return; */
 
-#ifdef CONFIG_CONCURRENT_MODE
-	if (!is_primary_adapter(padapter))
-		return;
-#endif
-
 	if ((adapter_to_pwrctl(padapter)->rf_pwrstate != rf_on &&
 	     adapter_to_pwrctl(padapter)->rfoff_reason > RF_CHANGE_BY_PS) &&
 	    (LedAction == LED_CTL_TX || LedAction == LED_CTL_RX ||
@@ -4162,6 +4155,12 @@ LedControlUSB(
 		return;
 
 	switch (ledpriv->LedStrategy) {
+	#if CONFIG_RTW_SW_LED_TRX_DA_CLASSIFY
+	case SW_LED_MODE_UC_TRX_ONLY:
+		rtw_sw_led_ctl_mode_uc_trx_only(padapter, LedAction);
+		break;
+	#endif
+
 	case SW_LED_MODE0:
 		SwLedControlMode0(padapter, LedAction);
 		break;
@@ -4270,11 +4269,7 @@ InitLed(
 	pLed->LedPin = LedPin;
 
 	ResetLedStatus(pLed);
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 15, 0)
 	rtw_init_timer(&(pLed->BlinkTimer), padapter, BlinkTimerCallback, pLed);
-#else
-	timer_setup(&pLed->BlinkTimer, BlinkTimerCallback, 0);
-#endif
 	_init_workitem(&(pLed->BlinkWorkItem), BlinkWorkItemCallback, pLed);
 }
 

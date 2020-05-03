@@ -326,6 +326,9 @@ int rtw_rson_isupdate_roamcan(struct mlme_priv *mlme
 		|| (rson_comp.id != CONFIG_RTW_REPEATER_SON_ID))
 		return _FALSE;
 
+	if (is_match_bssid(competitor->network.MacAddress, rtw_rson_block_bssid, rtw_rson_block_bssid_idx) == _TRUE)
+		return _FALSE;
+
 	if ((!mlme->cur_network_scanned)
 		|| (mlme->cur_network_scanned == competitor)
 		|| (rtw_get_rson_struct(&(mlme->cur_network_scanned->network), &rson_curr)) != _TRUE)
@@ -510,7 +513,7 @@ void rtw_rson_scan_cmd_hdl(_adapter *padapter, int op)
 	struct mlme_priv *pmlmepriv = &padapter->mlmepriv;
 	u8 val8;
 
-	if (mlmeext_chk_scan_state(pmlmeext, SCAN_DISABLE) != _FALSE)
+	if (mlmeext_chk_scan_state(pmlmeext, SCAN_DISABLE) != _TRUE)
 		return;
 	if (op == RSON_SCAN_PROCESS) {
 		padapter->rtw_rson_scanstage = RSON_SCAN_PROCESS;
@@ -545,14 +548,7 @@ void rtw_rson_scan_cmd_hdl(_adapter *padapter, int op)
 					if (rtw_to_roam(padapter) != 0) {
 						if (rtw_dec_to_roam(padapter) == 0) {
 							rtw_set_to_roam(padapter, 0);
-#ifdef CONFIG_INTEL_WIDI
-							if (padapter->mlmepriv.widi_state == INTEL_WIDI_STATE_ROAMING) {
-								_rtw_memset(pmlmepriv->sa_ext, 0x00, L2SDTA_SERVICE_VE_LEN);
-								intel_widi_wk_cmd(padapter, INTEL_WIDI_LISTEN_WK, NULL, 0);
-								RTW_INFO("change to widi listen\n");
-							}
-#endif /* CONFIG_INTEL_WIDI */
-							rtw_free_assoc_resources(padapter, 1);
+							rtw_free_assoc_resources(padapter, _TRUE);
 							rtw_indicate_disconnect(padapter, 0, _FALSE);
 						} else
 							pmlmepriv->to_join = _TRUE;

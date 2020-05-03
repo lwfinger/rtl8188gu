@@ -17,19 +17,17 @@
  */
 #define AUTOCONF_INCLUDED
 
-#define RTL871X_MODULE_NAME "8710BU"
-#ifdef CONFIG_FOR_RTL8710BU_VQ0
-#define DRV_NAME "rtl8710bu-vq0"
-#else
-#define DRV_NAME "rtl8710bu"
-#endif
+#define RTL871X_MODULE_NAME "8188GTVU"
+#define DRV_NAME "rtl8188gtvu"
 
-#ifndef CONFIG_RTL8710B
-#define CONFIG_RTL8710B
+#ifndef CONFIG_RTL8188GTV
+#define CONFIG_RTL8188GTV
 #endif
 #define CONFIG_USB_HCI
 
-#define PLATFORM_LINUX 1
+#define PLATFORM_LINUX
+
+#define RTL8188GTV_USB_MAC_LOOPBACK 0
 
 /*
  * Wi-Fi Functions Configure
@@ -61,9 +59,6 @@
 		#define CONFIG_HOSTAPD_MLME
 	#endif
 	/* #define CONFIG_FIND_BEST_CHANNEL */
-	/* #define CONFIG_NO_WIRELESS_HANDLERS */
-	#define CONFIG_TX_MCAST2UNI /* Support IP multicast to unicast */
-
 	/* #define CONFIG_AUTO_AP_MODE */
 #endif
 
@@ -81,7 +76,7 @@
 	#define CONFIG_P2P_PS
 	#define CONFIG_P2P_OP_CHK_SOCIAL_CH
 	#define CONFIG_CFG80211_ONECHANNEL_UNDER_CONCURRENT  /* replace CONFIG_P2P_CHK_INVITE_CH_LIST flag */
-	#define CONFIG_P2P_INVITE_IOT
+	/*#define CONFIG_P2P_INVITE_IOT*/
 #endif
 
 /*
@@ -96,21 +91,19 @@
 	#define CONFIG_TDLS_AUTOSETUP
 */
 	#define CONFIG_TDLS_AUTOCHECKALIVE
-	#define CONFIG_TDLS_CH_SW		/* Enable "CONFIG_TDLS_CH_SW" by default, however limit it to only work in wifi logo test mode but not in normal mode currently */
+	#define CONFIG_TDLS_CH_SW	/* Enable this flag only when we confirm that TDLS CH SW is supported in FW */
 #endif
 
 /* #define CONFIG_CONCURRENT_MODE */	/* Set from Makefile */
 #ifdef CONFIG_CONCURRENT_MODE
 	#define CONFIG_TSF_RESET_OFFLOAD			/* For 2 PORT TSF SYNC. */
 	#define CONFIG_RUNTIME_PORT_SWITCH
+
 	/* #define DBG_RUNTIME_PORT_SWITCH */
 #endif /* CONFIG_CONCURRENT_MODE */
 
 #define CONFIG_LAYER2_ROAMING
 #define CONFIG_LAYER2_ROAMING_RESUME
-
-#define CONFIG_80211D
-
 
 /*
  * Hareware/Firmware Related Configure
@@ -143,7 +136,6 @@
 #define CONFIG_USB_TX_AGGREGATION
 #define CONFIG_USB_RX_AGGREGATION
 
-#define USB_INTERFERENCE_ISSUE /* this should be checked in all usb interface */
 
 #define CONFIG_GLOBAL_UI_PID
 
@@ -195,8 +187,6 @@
 /* #define CONFIG_BACKGROUND_NOISE_MONITOR */
 #endif
 
-/* #define CONFIG_CHECK_AC_LIFETIME	*/ /* Check packet lifetime of 4 ACs. */
-
 #define CONFIG_EMBEDDED_FWIMG
 
 #ifdef CONFIG_EMBEDDED_FWIMG
@@ -205,13 +195,11 @@
 /* #define CONFIG_FILE_FWIMG */
 
 #define CONFIG_LONG_DELAY_ISSUE
-#define CONFIG_ATTEMPT_TO_FIX_AP_BEACON_ERROR
 
 
 /*
  * Auto Configure Section
  */
-#define CONFIG_MINIMAL_MEMORY_USAGE
 #ifdef CONFIG_MINIMAL_MEMORY_USAGE
 	#undef CONFIG_USB_TX_AGGREGATION
 	#undef CONFIG_USB_RX_AGGREGATION
@@ -227,21 +215,25 @@
 #endif /* !CONFIG_MP_INCLUDED */
 
 #ifdef CONFIG_POWER_SAVING
-	#define CONFIG_IPS
-	#define CONFIG_LPS
+#define CONFIG_IPS
+#define CONFIG_LPS
 
-	#ifdef CONFIG_IPS
-	/* #define CONFIG_IPS_LEVEL_2	1  */ /*enable this to set default IPS mode to IPS_LEVEL_2 */
-	#endif
+#ifdef CONFIG_IPS
+/* #define CONFIG_IPS_LEVEL_2	1  */ /*enable this to set default IPS mode to IPS_LEVEL_2 */
+#endif
 
-	#if defined(CONFIG_LPS) && defined(CONFIG_SUPPORT_USB_INT)
-		/* #define CONFIG_LPS_LCLK */
-	#endif
+#if defined(CONFIG_LPS)
+	#define CONFIG_LPS_LCLK
+#endif
 
-	#ifdef CONFIG_LPS_LCLK
-		#define CONFIG_XMIT_THREAD_MODE
+#ifdef CONFIG_LPS_LCLK
+	/* #define CONFIG_XMIT_THREAD_MODE */
+	#ifndef CONFIG_SUPPORT_USB_INT
+		#define LPS_RPWM_WAIT_MS 300
+		#define CONFIG_DETECT_CPWM_BY_POLLING
 	#endif
-#endif /* CONFIG_POWER_SAVING */
+#endif
+#endif /*CONFIG_POWER_SAVING*/
 
 #ifdef CONFIG_BT_COEXIST
 	/* for ODM and outsrc BT-Coex */
@@ -251,12 +243,12 @@
 #endif /* CONFIG_BT_COEXIST */
 
 #ifdef CONFIG_WOWLAN
-	/* #define CONFIG_GTK_OL */
+	#define CONFIG_GTK_OL
 #endif /* CONFIG_WOWLAN */
 
 #ifdef CONFIG_GPIO_WAKEUP
 	#ifndef WAKEUP_GPIO_IDX
-		#define WAKEUP_GPIO_IDX	6/* WIFI Chip Side */
+		#define WAKEUP_GPIO_IDX	0	/* WIFI Chip Side */
 	#endif /* !WAKEUP_GPIO_IDX */
 #endif /* CONFIG_GPIO_WAKEUP */
 
@@ -285,31 +277,26 @@
 #endif
 
 #ifdef CONFIG_TX_EARLY_MODE
-#define RTL8723C_EARLY_MODE_PKT_NUM_10	0
+#define RTL8188GTV_EARLY_MODE_PKT_NUM_10	0
 #endif
 
 
-#ifdef CONFIG_ANTENNA_DIVERSITY
-	#define CONFIG_HW_ANTENNA_DIVERSITY
-#endif
 
 
 /*
  * Debug Related Configure
  */
-#define CONFIG_DEBUG /* DBG_871X, etc... */
-#ifdef CONFIG_DEBUG
+#ifdef CONFIG_RTW_DEBUG
 	#define DBG	1	/* for ODM & BTCOEX debug */
 	#define DBG_PHYDM_MORE 0
-#else /* !CONFIG_DEBUG */
+#else /* !CONFIG_RTW_DEBUG */
 	#define DBG	0	/* for ODM & BTCOEX debug */
 	#define DBG_PHYDM_MORE 0
-#endif /* CONFIG_DEBUG */
+#endif /* CONFIG_RTW_DEBUG */
 
 
 
 #define CONFIG_PROC_DEBUG
-/* #define CONFIG_DIS_UPHY */
 
 /*
 #define DBG_CONFIG_ERROR_DETECT
@@ -336,8 +323,6 @@
 
 #define DBG_HAL_INIT_PROFILING
 
-#define DBG_MEMORY_LEAK	1
+#define DBG_MEMORY_LEAK
 */
-
-
-#define CONFIG_SYSON_INDIRECT_ACCESS
+#define	DBG_RX_DFRAME_RAW_DATA

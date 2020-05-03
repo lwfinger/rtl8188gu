@@ -108,18 +108,10 @@ typedef struct _RT_8710B_FIRMWARE_HDR {
 /* Note: We will divide number of page equally for each queue other than public queue! */
 
 /* For General Reserved Page Number(Beacon Queue is reserved page)
- * Beacon:2, PS-Poll:1, Null Data:1,Qos Null Data:1,BT Qos Null Data:1 */
-#define BCNQ_PAGE_NUM_8710B		0x08
-#ifdef CONFIG_CONCURRENT_MODE
-	#define BCNQ1_PAGE_NUM_8710B		0x08 /* 0x04 */
-#else
-	#define BCNQ1_PAGE_NUM_8710B		0x00
-#endif
+ * Beacon:MAX_BEACON_LEN/PAGE_SIZE_TX_8710B
+ * PS-Poll:1, Null Data:1,Qos Null Data:1,BT Qos Null Data:1,CTS-2-SELF,LTE QoS Null*/
+#define BCNQ_PAGE_NUM_8710B	(MAX_BEACON_LEN/PAGE_SIZE_TX_8710B + 6) /*0x08*/
 
-#ifdef CONFIG_PNO_SUPPORT
-	#undef BCNQ1_PAGE_NUM_8710B
-	#define BCNQ1_PAGE_NUM_8710B		0x00 /* 0x04 */
-#endif
 
 /* For WoWLan , more reserved page
  * ARP Rsp:1, RWC:1, GTK Info:1,GTK RSP:2,GTK EXT MEM:2, AOAC rpt 1, PNO: 6
@@ -141,7 +133,7 @@ typedef struct _RT_8710B_FIRMWARE_HDR {
 #endif
 
 #define TX_TOTAL_PAGE_NUMBER_8710B\
-	(0xFF - BCNQ_PAGE_NUM_8710B - BCNQ1_PAGE_NUM_8710B - WOWLAN_PAGE_NUM_8710B)
+	(0xFF - BCNQ_PAGE_NUM_8710B -WOWLAN_PAGE_NUM_8710B)
 #define TX_PAGE_BOUNDARY_8710B		(TX_TOTAL_PAGE_NUMBER_8710B + 1)
 
 #define WMM_NORMAL_TX_TOTAL_PAGE_NUMBER_8710B	TX_TOTAL_PAGE_NUMBER_8710B
@@ -221,9 +213,9 @@ void rtl8710b_init_default_value(PADAPTER padapter);
 
 
 u32 indirect_read32_8710b(PADAPTER padapter, u32 regaddr);
-VOID indirect_write32_8710b(PADAPTER padapter, u32 regaddr, u32 data);
+void indirect_write32_8710b(PADAPTER padapter, u32 regaddr, u32 data);
 u32 hal_query_syson_reg_8710b(PADAPTER padapter, u32 regaddr, u32 bitmask);
-VOID hal_set_syson_reg_8710b(PADAPTER padapter, u32 regaddr, u32 bitmask, u32 data);
+void hal_set_syson_reg_8710b(PADAPTER padapter, u32 regaddr, u32 bitmask, u32 data);
 #define HAL_SetSYSOnReg hal_set_syson_reg_8710b
 
 
@@ -249,7 +241,7 @@ void Hal_EfuseParseXtal_8710B(PADAPTER pAdapter,
 			      u8 *hwinfo, u8 AutoLoadFail);
 void Hal_EfuseParseThermalMeter_8710B(PADAPTER padapter,
 				      u8 *hwinfo, u8 AutoLoadFail);
-VOID Hal_EfuseParseBoardType_8710B(PADAPTER Adapter,
+void Hal_EfuseParseBoardType_8710B(PADAPTER Adapter,
 				   u8	*PROMContent, BOOLEAN AutoloadFail);
 #endif
 
