@@ -67,7 +67,7 @@ s32 rtl8710bu_init_xmit_priv(PADAPTER padapter)
 
 #ifdef PLATFORM_LINUX
 	tasklet_init(&pxmitpriv->xmit_tasklet,
-		     (void (*)(unsigned long))rtl8710bu_xmit_tasklet,
+		     (void (*))rtl8710bu_xmit_tasklet,
 		     (unsigned long)padapter);
 #endif
 	return _SUCCESS;
